@@ -1,0 +1,321 @@
+// use prisma-8
+// prisma/schema.prisma
+
+// ==========================================
+// 1. ENUMS
+// ==========================================
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  QR
+  CARD
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+enum TableStatus {
+  EMPTY
+  OCCUPIED
+  RESERVED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKE_AWAY
+}
+
+enum InventoryLogType {
+  ORDER_USAGE
+  PURCHASE_RECEIPT
+  WASTE
+  ADJUSTMENT
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  COMPLETED
+  CANCELLED
+}
+
+// ==========================================
+// 2. NHÂN SỰ & QUYỀN (STAFF & AUTH)
+// ==========================================
+model Role {
+  id          Uuid   @id @onCreate(uuid())
+  name        String @unique
+  permissions Json   @default(json`{}`)
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           Uuid        @id @onCreate(uuid())
+  roleId       Uuid        @map("role_id")
+  username     String      @unique
+  passwordHash String      @map("password_hash")
+  posPin       VarChar(6)? @map("pos_pin")
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  role         Role        @relation(fields: [roleId], references: [id])
+  orders       Order[]
+  shifts       Shift[]
+
+  @@map("users")
+}
+
+// ==========================================
+// 3. MENU & CATALOG (SẢN PHẨM & TÙY CHỈNH)
+// ==========================================
+model Category {
+  id        Uuid       @id @onCreate(uuid())
+  parentId  Uuid?      @map("parent_id")
+  name      String
+  sortOrder Int        @default(0) @map("sort_order")
+
+  parent    Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryToCategory")
+  products  Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id         Uuid            @id @onCreate(uuid())
+  categoryId Uuid            @map("category_id")
+  name       String
+  basePrice  Numeric(10, 2)  @map("base_price")
+  isActive   Boolean         @default(true) @map("is_active")
+
+  category   Category        @relation(fields: [categoryId], references: [id])
+  options    ProductOption[]
+  orderItems OrderItem[]
+  recipes    RecipeItem[]
+
+  @@map("products")
+}
+
+model ProductOption {
+  id         Uuid                 @id @onCreate(uuid())
+  productId  Uuid                 @map("product_id")
+  optionName String               @map("option_name")
+  isRequired Boolean              @default(false) @map("is_required")
+  maxChoices Int                  @default(1) @map("max_choices")
+
+  product    Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values     ProductOptionValue[]
+
+  @@map("product_options")
+}
+
+model ProductOptionValue {
+  id              Uuid                 @id @onCreate(uuid())
+  optionId        Uuid                 @map("option_id")
+  valueName       String               @map("value_name")
+  priceAdjustment Numeric(10, 2)       @default(0) @map("price_adjustment")
+
+  option          ProductOption        @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  orderModifiers  OrderItemModifier[]
+  modifierRecipes ModifierRecipeItem[]
+
+  @@map("product_option_values")
+}
+
+// ==========================================
+// 4. BÀN & KHU VỰC (TABLE & AREA - DINE-IN)
+// ==========================================
+model Area {
+  id        Uuid     @id @onCreate(uuid())
+  name      String   @unique
+  sortOrder Int      @default(0) @map("sort_order")
+  tables    Table[]
+
+  @@map("areas")
+}
+
+model Table {
+  id          Uuid        @id @onCreate(uuid())
+  areaId      Uuid        @map("area_id")
+  tableNumber String      @map("table_number")
+  capacity    Int         @default(4)
+  status      TableStatus @default(EMPTY)
+
+  area        Area        @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@unique([areaId, tableNumber])
+  @@map("tables")
+}
+
+// ==========================================
+// 5. CA LÀM VIỆC (SHIFT)
+// ==========================================
+model Shift {
+  id               Uuid            @id @onCreate(uuid())
+  cashierId        Uuid            @map("cashier_id")
+  startTime        DateTime        @default(now()) @map("start_time")
+  endTime          DateTime?       @map("end_time")
+  startingCash     Numeric(10, 2)  @map("starting_cash")
+  actualEndingCash Numeric(10, 2)? @map("actual_ending_cash")
+  status           ShiftStatus     @default(OPEN)
+
+  cashier          User            @relation(fields: [cashierId], references: [id])
+  orders           Order[]
+
+  @@map("shifts")
+}
+
+// ==========================================
+// 6. ORDER & POS (GIAO DỊCH BÁN HÀNG)
+// ==========================================
+model Order {
+  id            Uuid           @id @onCreate(uuid())
+  cashierId     Uuid           @map("cashier_id")
+  shiftId       Uuid           @map("shift_id")
+  tableId       Uuid?          @map("table_id")
+  orderType     OrderType      @default(DINE_IN) @map("order_type")
+  status        OrderStatus    @default(PENDING)
+  paymentMethod PaymentMethod? @map("payment_method")
+  subtotal      Numeric(10, 2)
+  totalAmount   Numeric(10, 2) @map("total_amount")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  cashier       User           @relation(fields: [cashierId], references: [id])
+  shift         Shift          @relation(fields: [shiftId], references: [id])
+  table         Table?         @relation(fields: [tableId], references: [id])
+  items         OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         Uuid                @id @onCreate(uuid())
+  orderId    Uuid                @map("order_id")
+  productId  Uuid                @map("product_id")
+  quantity   Int
+  unitPrice  Numeric(10, 2)      @map("unit_price")
+  totalPrice Numeric(10, 2)      @map("total_price")
+
+  order      Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product             @relation(fields: [productId], references: [id])
+  modifiers  OrderItemModifier[]
+
+  @@map("order_items")
+}
+
+model OrderItemModifier {
+  id              Uuid               @id @onCreate(uuid())
+  orderItemId     Uuid               @map("order_item_id")
+  optionValueId   Uuid               @map("option_value_id")
+  priceAdjustment Numeric(10, 2)     @default(0) @map("price_adjustment")
+
+  orderItem       OrderItem          @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  optionValue     ProductOptionValue @relation(fields: [optionValueId], references: [id])
+
+  @@map("order_item_modifiers")
+}
+
+// ==========================================
+// 7. KHO & ĐỊNH MỨC (INVENTORY & BOM RECIPES)
+// ==========================================
+model Ingredient {
+  id              Uuid                 @id @onCreate(uuid())
+  name            String               @unique
+  unit            String
+  currentStock    Numeric(10, 2)       @default(0) @map("current_stock")
+  safetyStock     Numeric(10, 2)       @default(0) @map("safety_stock")
+  costPrice       Numeric(10, 2)       @default(0) @map("cost_price")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @onCreate(now()) @onUpdate(now()) @map("updated_at")
+
+  recipes         RecipeItem[]
+  modifierRecipes ModifierRecipeItem[]
+  logs            InventoryLog[]
+  poItems         PurchaseOrderItem[]
+
+  @@map("ingredients")
+}
+
+model RecipeItem {
+  id               Uuid           @id @onCreate(uuid())
+  productId        Uuid           @map("product_id")
+  ingredientId     Uuid           @map("ingredient_id")
+  quantityRequired Numeric(10, 2) @map("quantity_required")
+
+  product          Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient     @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+  @@map("recipe_items")
+}
+
+model ModifierRecipeItem {
+  id               Uuid               @id @onCreate(uuid())
+  optionValueId    Uuid               @map("option_value_id")
+  ingredientId     Uuid               @map("ingredient_id")
+  quantityRequired Numeric(10, 2)     @map("quantity_required")
+
+  optionValue      ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient         @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([optionValueId, ingredientId])
+  @@map("modifier_recipe_items")
+}
+
+model InventoryLog {
+  id           Uuid             @id @onCreate(uuid())
+  ingredientId Uuid             @map("ingredient_id")
+  changeAmount Numeric(10, 2)   @map("change_amount")
+  balanceAfter Numeric(10, 2)   @map("balance_after")
+  type         InventoryLogType
+  referenceId  Uuid?            @map("reference_id")
+  reason       String?
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  ingredient   Ingredient       @relation(fields: [ingredientId], references: [id])
+
+  @@map("inventory_logs")
+}
+
+model PurchaseOrder {
+  id          Uuid                @id @onCreate(uuid())
+  supplier    String
+  totalAmount Numeric(10, 2)      @default(0) @map("total_amount")
+  status      PurchaseOrderStatus @default(DRAFT)
+  createdAt   DateTime            @default(now()) @map("created_at")
+  items       PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              Uuid          @id @onCreate(uuid())
+  purchaseOrderId Uuid          @map("purchase_order_id")
+  ingredientId    Uuid          @map("ingredient_id")
+  quantity        Numeric(10, 2)
+  unitPrice       Numeric(10, 2) @map("unit_price")
+  totalPrice      Numeric(10, 2) @map("total_price")
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  ingredient      Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@map("purchase_order_items")
+}

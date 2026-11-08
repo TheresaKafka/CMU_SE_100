@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDS Bếp & Pha Chế - The Coffee Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulse-card {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    .new-order-flash {
+      animation: pulse-card 0.5s ease-in-out 3;
+    }
+  </style>
+</head>
+<body class="bg-stone-950 text-stone-100 min-h-screen flex flex-col overflow-hidden select-none">
+  <!-- Top Navigation Bar -->
+  <header class="bg-stone-900 border-b border-stone-800 px-6 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-emerald-900/40">
+        <i class="fa-solid fa-blender"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-extrabold tracking-tight text-white leading-none">THE COFFEE LAB • KDS</h1>
+        <p class="text-[11px] font-semibold text-emerald-400 tracking-wider uppercase mt-1">Màn Hình Pha Chế Barista & Bếp</p>
+      </div>
+
+      <!-- Socket Connection Status -->
+      <div id="socketBadge" class="ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 bg-stone-800 text-stone-400">
+        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>Đang kết nối socket...</span>
+      </div>
+    </div>
+
+    <!-- Station Filter Tabs -->
+    <div class="flex rounded-xl bg-stone-800/80 p-1 border border-stone-700/50">
+      <button onclick="filterStation('ALL')" id="tabStationAll" class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm">
+        Tất Cả Món (<span id="countAll">0</span>)
+      </button>
+      <button onclick="filterStation('HOT_BAR')" id="tabStationHot" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
+        <i class="fa-solid fa-mug-hot mr-1 text-amber-500"></i>Hot Bar (<span id="countHot">0</span>)
+      </button>
+      <button onclick="filterStation('COLD_BAR')" id="tabStationCold" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
+        <i class="fa-solid fa-snowflake mr-1 text-sky-400"></i>Cold Bar (<span id="countCold">0</span>)
+      </button>
+      <button onclick="filterStation('WARMING_STATION')" id="tabStationBakery" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
+        <i class="fa-solid fa-bread-slice mr-1 text-orange-400"></i>Bếp Bánh (<span id="countBakery">0</span>)
+      </button>
+    </div>
+
+    <!-- Right Quick Links & Audio Test -->
+    <div class="flex items-center gap-3">
+      <button onclick="playNotificationBeep()" title="Thử nghiệm âm thanh chuông" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 transition flex items-center gap-1.5 border border-stone-700">
+        <i class="fa-solid fa-volume-high text-emerald-400"></i>
+        <span class="hidden sm:inline">Chuông báo</span>
+      </button>
+
+      <a href="/pos.html" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-cash-register text-amber-400"></i>
+        <span>Quầy POS</span>
+      </a>
+
+      <a href="/admin.html" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-chart-pie text-indigo-400"></i>
+        <span>HQ Dashboard</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- KDS Order Kanban Grid -->
+  <main class="flex-1 p-6 overflow-y-auto">
+    <!-- Empty State -->
+    <div id="kdsEmptyState" class="h-full flex flex-col items-center justify-center text-stone-600 py-20">
+      <div class="w-24 h-24 rounded-3xl bg-stone-900 border border-stone-800 flex items-center justify-center text-4xl text-stone-700 mb-4 shadow-inner">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3 class="text-xl font-bold text-stone-400">Quầy Bar / Bếp Đã Sạch Đơn</h3>
+      <p class="text-xs text-stone-600 mt-1 max-w-sm text-center">Đang chờ đơn hàng mới từ thu ngân POS... Đơn sẽ tự động xuất hiện real-time tại đây kèm âm báo chuông.</p>
+    </div>
+
+    <!-- Active Orders Grid -->
+    <div id="kdsOrderGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+      <!-- Dynamic Order Cards -->
+    </div>
+  </main>
+
+  <script>
+    // State
+    let socket = null;
+    let orders = [];
+    let currentStation = 'ALL';
+    let audioCtx = null;
+
+    // Web Audio API Beep Synth (Ting Ting Bell)
+    function playNotificationBeep() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+        const osc1 = audioCtx.createOscillator();
+        const osc2 = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, now); // Note A5
+        osc1.frequency.exponentialRampToValueAtTime(1320, now + 0.15);
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1760, now + 0.05);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc1.start(now);
+        osc2.start(now + 0.05);
+        osc1.stop(now + 0.6);
+        osc2.stop(now + 0.6);
+      } catch (err) {
+        console.warn('Audio play error:', err);
+      }
+    }
+
+    // Initialize
+    async function init() {
+      await loadInitialOrders();
+      connectSocket();
+      setInterval(updateTimers, 1000);
+    }
+
+    // Connect WebSocket /kds
+    function connectSocket() {
+      socket = io('/kds');
+      const badge = document.getElementById('socketBadge');
+
+      socket.on('connect', () => {
+        badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 bg-emerald-950/80 text-emerald-400 border border-emerald-800/60';
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>Socket Real-Time</span>';
+      });
+
+      socket.on('disconnect', () => {
+        badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 bg-rose-950/80 text-rose-400 border border-rose-800/60';
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Mất kết nối</span>';
+      });
+
+      // Lắng nghe sự kiện đơn hàng mới tạo từ POS
+      socket.on('order.created', (orderEvent) => {
+        console.log('[KDS] Nhận đơn hàng mới order.created:', orderEvent);
+        playNotificationBeep();
+        addNewOrderFromSocket(orderEvent);
+      });
+
+      socket.on('order:new', (orderEvent) => {
+        // Fallback event name
+        if (!orders.some(o => o.orderId === orderEvent.orderId)) {
+          addNewOrderFromSocket(orderEvent);
+        }
+      });
+
+      // Lắng nghe sự kiện đơn đã thanh toán
+      socket.on('order.paid', (payload) => {
+        const existing = orders.find(o => o.orderId === payload.orderId);
+        if (existing) {
+          existing.status = 'PAID';
+          renderOrders();
+        }
+      });
+
+      // Lắng nghe sự kiện cập nhật trạng thái chế biến
+      socket.on('order.status-updated', (payload) => {
+        if (payload.status === 'COMPLETED') {
+          orders = orders.filter(o => o.orderId !== payload.orderId);
+        } else {
+          const target = orders.find(o => o.orderId === payload.orderId);
+          if (target) {
+            target.status = payload.status;
+          }
+        }
+        renderOrders();
+      });
+    }
+
+    function addNewOrderFromSocket(eventData) {
+      if (orders.some(o => o.orderId === eventData.orderId)) return;
+
+      const newOrder = {
+        orderId: eventData.orderId,
+        orderType: eventData.orderType || 'DINE_IN',
+        tableNumber: eventData.tableNumber || null,
+        areaName: eventData.areaName || null,
+        status: eventData.status || 'PENDING',
+        createdAt: eventData.createdAt || new Date().toISOString(),
+        items: eventData.items || [],
+        isNew: true
+      };
+
+      orders.unshift(newOrder);
+      renderOrders();
+
+      // Clear animation after 3s
+      setTimeout(() => {
+        newOrder.isNew = false;
+        renderOrders();
+      }, 3000);
+    }
+
+    // Load active orders from REST API
+    async function loadInitialOrders() {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const res = await fetch('/api/v1/orders?limit=50', { headers });
+        const json = await res.json();
+        const data = json.data || json || [];
+
+        // Filter active orders (PENDING, PAID, PROCESSING)
+        const active = data.filter(o => ['PENDING', 'PAID', 'PROCESSING'].includes(o.status));
+
+        // Format into KDS items
+        orders = active.map(o => ({
+          orderId: o.id,
+          orderType: o.orderType,
+          tableNumber: o.tableNumber,
+          status: o.status,
+          createdAt: o.createdAt,
+          items: (o.items || []).map(item => {
+            const nameLower = (item.product ? item.product.name : '').toLowerCase();
+            let station = 'BAR';
+            if (nameLower.includes('bánh') || nameLower.includes('cake') || nameLower.includes('croissant')) {
+              station = 'WARMING_STATION';
+            } else if (nameLower.includes('đá') || nameLower.includes('trà') || nameLower.includes('cold')) {
+              station = 'COLD_BAR';
+            } else if (nameLower.includes('nóng') || nameLower.includes('hot') || nameLower.includes('espresso')) {
+              station = 'HOT_BAR';
+            }
+
+            return {
+              productName: item.product ? item.product.name : 'Món',
+              quantity: item.quantity,
+              modifiers: (item.modifiers || []).map(m => ({
+                name: m.optionValue ? m.optionValue.valueName : ''
+              })),
+              station
+            };
+          })
+        }));
+
+        renderOrders();
+      } catch (err) {
+        console.error('Lỗi tải orders:', err);
+      }
+    }
+
+    // Station Filter
+    function filterStation(station) {
+      currentStation = station;
+      const tabs = {
+        'ALL': document.getElementById('tabStationAll'),
+        'HOT_BAR': document.getElementById('tabStationHot'),
+        'COLD_BAR': document.getElementById('tabStationCold'),
+        'WARMING_STATION': document.getElementById('tabStationBakery')
+      };
+
+      Object.keys(tabs).forEach(k => {
+        if (k === station) {
+          tabs[k].className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm';
+        } else {
+          tabs[k].className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white';
+        }
+      });
+
+      renderOrders();
+    }
+
+    // Render Order Cards
+    function renderOrders() {
+      const grid = document.getElementById('kdsOrderGrid');
+      const empty = document.getElementById('kdsEmptyState');
+
+      // Update counters
+      let countAll = 0, countHot = 0, countCold = 0, countBakery = 0;
+      orders.forEach(o => {
+        o.items.forEach(it => {
+          countAll++;
+          if (it.station === 'HOT_BAR') countHot++;
+          if (it.station === 'COLD_BAR') countCold++;
+          if (it.station === 'WARMING_STATION') countBakery++;
+        });
+      });
+
+      document.getElementById('countAll').textContent = orders.length;
+      document.getElementById('countHot').textContent = countHot;
+      document.getElementById('countCold').textContent = countCold;
+      document.getElementById('countBakery').textContent = countBakery;
+
+      // Filter by station
+      let displayOrders = orders;
+      if (currentStation !== 'ALL') {
+        displayOrders = orders.filter(o => o.items.some(it => it.station === currentStation));
+      }
+
+      if (displayOrders.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+
+      grid.innerHTML = displayOrders.map(order => {
+        const timeDiff = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000);
+        const mins = Math.floor(timeDiff / 60);
+        const secs = timeDiff % 60;
+        const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        // Color urgency
+        let timerColor = 'text-stone-300 bg-stone-800';
+        let cardBorder = 'border-stone-800';
+        if (mins >= 10) {
+          timerColor = 'text-rose-300 bg-rose-950 border border-rose-800 animate-pulse';
+          cardBorder = 'border-rose-600/80 shadow-rose-900/30';
+        } else if (mins >= 5) {
+          timerColor = 'text-amber-300 bg-amber-950 border border-amber-800';
+          cardBorder = 'border-amber-600/80';
+        }
+
+        const isProcessing = order.status === 'PROCESSING';
+
+        // Filter items if specific station selected
+        const visibleItems = currentStation === 'ALL'
+          ? order.items
+          : order.items.filter(it => it.station === currentStation);
+
+        return `
+          <div class="bg-stone-900 rounded-3xl border ${cardBorder} shadow-xl flex flex-col justify-between overflow-hidden transition-all duration-300 ${order.isNew ? 'new-order-flash ring-2 ring-emerald-500' : ''}">
+            <!-- Card Header -->
+            <div class="p-4 border-b border-stone-800 flex items-center justify-between">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-base font-extrabold text-white">#${order.orderId.slice(0, 8).toUpperCase()}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'}">
+                    ${order.orderType === 'DINE_IN' ? (order.tableNumber ? `Bàn ${order.tableNumber}` : 'Tại bàn') : 'Mang đi'}
+                  </span>
+                </div>
+                <p class="text-[10px] font-medium text-stone-500 mt-0.5">${new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+              </div>
+
+              <!-- Live Elapsed Timer -->
+              <div class="px-2.5 py-1 rounded-xl text-xs font-mono font-bold ${timerColor}">
+                <i class="fa-solid fa-stopwatch mr-1 text-[10px]"></i>
+                <span class="order-timer" data-time="${order.createdAt}">${timeStr}</span>
+              </div>
+            </div>
+
+            <!-- Card Body: Item List -->
+            <div class="p-4 flex-1 space-y-3 overflow-y-auto max-h-72 no-scrollbar">
+              ${visibleItems.map(item => `
+                <div class="bg-stone-950/70 rounded-2xl p-3 border border-stone-800/80">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                      <span class="w-6 h-6 rounded-lg bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-extrabold text-xs">
+                        ${item.quantity}
+                      </span>
+                      <span class="font-extrabold text-sm text-stone-100">${item.productName}</span>
+                    </div>
+                    <!-- Station Tag -->
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${getStationBadge(item.station)}">
+                      ${getStationName(item.station)}
+                    </span>
+                  </div>
+
+                  <!-- Modifiers -->
+                  ${item.modifiers && item.modifiers.length > 0 ? `
+                    <div class="mt-2 pl-8 flex flex-wrap gap-1">
+                      ${item.modifiers.map(m => `
+                        <span class="text-[10px] px-2 py-0.5 rounded-md bg-stone-800 text-amber-400 border border-stone-700/60 font-medium">
+                          • ${m.name}
+                        </span>
+                      `).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Card Footer: Status Actions -->
+            <div class="p-4 border-t border-stone-800 bg-stone-950/40">
+              ${isProcessing ? `
+                <button onclick="updateOrderStatus('${order.orderId}', 'COMPLETED')"
+                  class="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs tracking-wider transition active:scale-[0.98] shadow-lg shadow-emerald-950 flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-check text-sm"></i>
+                  <span>ĐÃ HOÀN THÀNH</span>
+                </button>
+              ` : `
+                <button onclick="updateOrderStatus('${order.orderId}', 'PROCESSING')"
+                  class="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs tracking-wider transition active:scale-[0.98] shadow-lg shadow-amber-950 flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-fire-burner text-sm"></i>
+                  <span>BẮT ĐẦU PHA CHẾ</span>
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getStationBadge(station) {
+      if (station === 'HOT_BAR') return 'bg-amber-500/10 text-amber-400 border border-amber-500/30';
+      if (station === 'COLD_BAR') return 'bg-sky-500/10 text-sky-400 border border-sky-500/30';
+      if (station === 'WARMING_STATION') return 'bg-orange-500/10 text-orange-400 border border-orange-500/30';
+      return 'bg-stone-800 text-stone-400';
+    }
+
+    function getStationName(station) {
+      if (station === 'HOT_BAR') return 'Hot Bar';
+      if (station === 'COLD_BAR') return 'Cold Bar';
+      if (station === 'WARMING_STATION') return 'Bếp Bánh';
+      return 'Bar';
+    }
+
+    // Barista updates status via WebSocket
+    function updateOrderStatus(orderId, nextStatus) {
+      if (!socket || !socket.connected) {
+        alert('Chưa kết nối được tới máy chủ WebSocket');
+        return;
+      }
+
+      console.log(`[KDS] Barista gửi yêu cầu: ${orderId} -> ${nextStatus}`);
+      socket.emit('order.update-status', { orderId, status: nextStatus }, (response) => {
+        console.log('Socket update response:', response);
+      });
+
+      // Optimistic local UI update
+      if (nextStatus === 'COMPLETED') {
+        orders = orders.filter(o => o.orderId !== orderId);
+      } else {
+        const order = orders.find(o => o.orderId === orderId);
+        if (order) order.status = nextStatus;
+      }
+      renderOrders();
+    }
+
+    // Live Clock Timers
+    function updateTimers() {
+      document.querySelectorAll('.order-timer').forEach(el => {
+        const created = el.getAttribute('data-time');
+        if (!created) return;
+        const diff = Math.floor((Date.now() - new Date(created).getTime()) / 1000);
+        const mins = Math.floor(diff / 60);
+        const secs = diff % 60;
+        el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      });
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
+

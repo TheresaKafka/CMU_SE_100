@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HQ Dashboard Quản Trị - The Coffee Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-stone-100 text-stone-900 min-h-screen flex">
+  <!-- Sidebar Navigation -->
+  <aside class="w-64 bg-stone-900 text-stone-300 flex flex-col justify-between shrink-0 shadow-2xl z-30">
+    <div>
+      <!-- Brand Logo -->
+      <div class="p-6 border-b border-stone-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-indigo-600/30">
+          <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-extrabold text-white tracking-tight leading-none">THE COFFEE LAB</h1>
+          <p class="text-[10px] font-bold text-indigo-400 tracking-wider uppercase mt-1">HQ Central Admin</p>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-4 space-y-1.5 text-xs font-bold">
+        <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-white bg-indigo-600 shadow-md shadow-indigo-600/20">
+          <i class="fa-solid fa-chart-line text-sm w-4"></i>
+          <span>Báo Cáo Doanh Thu</span>
+        </button>
+
+        <button onclick="switchTab('products')" id="nav-products" class="nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-stone-400 hover:text-white hover:bg-stone-800">
+          <i class="fa-solid fa-mug-saucer text-sm w-4"></i>
+          <span>Quản Lý Món & Menu</span>
+        </button>
+
+        <button onclick="switchTab('inventory')" id="nav-inventory" class="nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-stone-400 hover:text-white hover:bg-stone-800">
+          <i class="fa-solid fa-boxes-stacked text-sm w-4"></i>
+          <span>Kho & Định Mức BOM</span>
+          <span id="navSafetyBadge" class="ml-auto px-1.5 py-0.5 rounded-full text-[10px] bg-rose-600 text-white font-extrabold hidden">0</span>
+        </button>
+
+        <button onclick="switchTab('tables')" id="nav-tables" class="nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-stone-400 hover:text-white hover:bg-stone-800">
+          <i class="fa-solid fa-chair text-sm w-4"></i>
+          <span>Khu Vực & Bàn</span>
+        </button>
+
+        <button onclick="switchTab('orders')" id="nav-orders" class="nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-stone-400 hover:text-white hover:bg-stone-800">
+          <i class="fa-solid fa-receipt text-sm w-4"></i>
+          <span>Lịch Sử Đơn Hàng</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Bottom Quick Links & User -->
+    <div class="p-4 border-t border-stone-800 space-y-3">
+      <div class="grid grid-cols-2 gap-2">
+        <a href="/pos.html" class="py-2 px-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-[11px] font-bold text-center transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-cash-register text-amber-500"></i> POS
+        </a>
+        <a href="/kds.html" class="py-2 px-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-[11px] font-bold text-center transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-blender text-emerald-500"></i> KDS
+        </a>
+      </div>
+
+      <div class="pt-2 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <p id="adminUserLbl" class="font-bold text-white text-xs">Admin</p>
+            <p class="text-[10px] text-stone-500">Quản trị viên</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="text-stone-400 hover:text-rose-400 text-sm p-1.5 transition">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 flex flex-col h-screen overflow-y-auto">
+    <!-- Top Header -->
+    <header class="bg-white border-b border-stone-200 px-8 py-4 flex items-center justify-between shrink-0 shadow-sm sticky top-0 z-20">
+      <div>
+        <h2 id="pageTitle" class="text-xl font-extrabold text-stone-900 tracking-tight">Báo Cáo Doanh Thu & Tổng Quan</h2>
+        <p id="pageDesc" class="text-xs text-stone-500 mt-0.5">Dữ liệu thời gian thực cập nhật từ các chi nhánh và quầy POS</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="refreshData()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-2">
+          <i class="fa-solid fa-arrows-rotate text-indigo-600"></i>
+          <span>Làm mới dữ liệu</span>
+        </button>
+        <a href="/api/docs" target="_blank" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition flex items-center gap-2 border border-indigo-200">
+          <i class="fa-solid fa-code"></i>
+          <span>Tài liệu API</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- CONTENT TABS -->
+    <div class="p-8 space-y-8 flex-1">
+      <!-- ============================================== -->
+      <!-- TAB 1: ANALYTICS & DOANH THU -->
+      <!-- ============================================== -->
+      <section id="tab-analytics" class="tab-content space-y-8">
+        <!-- 4 Top KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <!-- KPI 1: Total Revenue -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-2xl font-bold">
+              <i class="fa-solid fa-sack-dollar"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Tổng Doanh Thu</p>
+              <h3 id="kpiTotalRevenue" class="text-2xl font-extrabold text-stone-900 mt-0.5">0đ</h3>
+              <p class="text-[11px] font-semibold text-emerald-600 mt-1"><i class="fa-solid fa-arrow-trend-up mr-1"></i>Doanh thu đã chốt</p>
+            </div>
+          </div>
+
+          <!-- KPI 2: Total Orders -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center text-2xl font-bold">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Đơn Hàng Đã Bán</p>
+              <h3 id="kpiTotalOrders" class="text-2xl font-extrabold text-stone-900 mt-0.5">0</h3>
+              <p class="text-[11px] font-semibold text-stone-500 mt-1" id="kpiPendingOrders">0 đơn chờ pha chế</p>
+            </div>
+          </div>
+
+          <!-- KPI 3: SePay QR Revenue -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl font-bold">
+              <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Thanh Toán SePay QR</p>
+              <h3 id="kpiQrRevenue" class="text-2xl font-extrabold text-emerald-600 mt-0.5">0đ</h3>
+              <p class="text-[11px] font-semibold text-stone-500 mt-1" id="kpiCashRevenue">Tiền mặt: 0đ</p>
+            </div>
+          </div>
+
+          <!-- KPI 4: Safety Stock Alert -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center text-2xl font-bold">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-stone-500 uppercase tracking-wider">Cảnh Báo Hết Kho</p>
+              <h3 id="kpiSafetyAlert" class="text-2xl font-extrabold text-rose-600 mt-0.5">0</h3>
+              <p class="text-[11px] font-semibold text-rose-600 mt-1">Nguyên liệu cần nhập thêm</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Revenue Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Chart 1: Revenue by Payment Method (2 cols) -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h4 class="text-base font-bold text-stone-900">Cơ Cấu Doanh Thu Theo Kênh Thanh Toán</h4>
+                <p class="text-xs text-stone-500">So sánh doanh số Tiền mặt và Chuyển khoản VietQR SePay</p>
+              </div>
+            </div>
+            <div class="h-64">
+              <canvas id="revenuePaymentChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Top Selling Products (1 col) -->
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm">
+            <div class="mb-4">
+              <h4 class="text-base font-bold text-stone-900">Top Món Bán Chạy Nhất</h4>
+              <p class="text-xs text-stone-500">Dựa trên số lượng ly phục vụ</p>
+            </div>
+            <div class="h-64 flex items-center justify-center">
+              <canvas id="topProductsChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 2: QUẢN LÝ SẢN PHẨM & MENU -->
+      <!-- ============================================== -->
+      <section id="tab-products" class="tab-content space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-stone-900">Danh Sách Món & Thức Uống</h3>
+            <p class="text-xs text-stone-500">Quản lý thực đơn hiển thị trên quầy POS thu ngân</p>
+          </div>
+          <button onclick="openProductModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-2 transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Thêm Món Mới</span>
+          </button>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-bold">
+              <tr>
+                <th class="p-4 pl-6">Sản phẩm</th>
+                <th class="p-4">Danh mục</th>
+                <th class="p-4">Giá bán cơ bản</th>
+                <th class="p-4">Trạng thái</th>
+                <th class="p-4 text-right pr-6">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="productTableBody" class="divide-y divide-stone-100">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 3: KHO & ĐỊNH MỨC BOM -->
+      <!-- ============================================== -->
+      <section id="tab-inventory" class="tab-content space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-stone-900">Quản Lý Tồn Kho & Định Mức BOM (INV-01/02/03)</h3>
+            <p class="text-xs text-stone-500">Tự động trừ kho theo công thức khi thanh toán đơn POS</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openAdjustModal()" class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md shadow-amber-600/20 flex items-center gap-2 transition">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Cân Chỉnh Kho</span>
+            </button>
+            <button onclick="openIngredientModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-2 transition">
+              <i class="fa-solid fa-plus"></i>
+              <span>Thêm Nguyên Liệu</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Inventory List Table -->
+        <div class="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-bold">
+              <tr>
+                <th class="p-4 pl-6">Tên Nguyên Vật Liệu</th>
+                <th class="p-4">Đơn vị</th>
+                <th class="p-4">Tồn kho hiện tại</th>
+                <th class="p-4">Ngưỡng an toàn</th>
+                <th class="p-4">Giá vốn (Cost)</th>
+                <th class="p-4">Tình trạng kho</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody" class="divide-y divide-stone-100">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 4: KHU VỰC & BÀN -->
+      <!-- ============================================== -->
+      <section id="tab-tables" class="tab-content space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-stone-900">Quản Lý Khu Vực & Sơ Đồ Bàn (POS-01)</h3>
+            <p class="text-xs text-stone-500">Cấu hình bàn phục vụ cho khách ngồi tại chỗ</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openAreaModal()" class="px-4 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs shadow-sm flex items-center gap-2 transition">
+              <i class="fa-solid fa-plus"></i>
+              <span>Thêm Khu Vực</span>
+            </button>
+            <button onclick="openTableModal()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-600/20 flex items-center gap-2 transition">
+              <i class="fa-solid fa-plus"></i>
+              <span>Thêm Bàn Mới</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="adminAreaList" class="space-y-6">
+          <!-- Dynamic areas and tables -->
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- TAB 5: LỊCH SỬ ĐƠN HÀNG -->
+      <!-- ============================================== -->
+      <section id="tab-orders" class="tab-content space-y-6 hidden">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-bold text-stone-900">Lịch Sử Giao Dịch & Đơn Hàng</h3>
+            <p class="text-xs text-stone-500">Tra cứu toàn bộ hóa đơn từ POS và thanh toán SePay</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-stone-50 border-b border-stone-200 text-stone-500 uppercase tracking-wider font-bold">
+              <tr>
+                <th class="p-4 pl-6">Mã đơn</th>
+                <th class="p-4">Thời gian</th>
+                <th class="p-4">Thu ngân</th>
+                <th class="p-4">Hình thức</th>
+                <th class="p-4">Tổng tiền</th>
+                <th class="p-4">Thanh toán</th>
+                <th class="p-4">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody" class="divide-y divide-stone-100">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODAL: Add/Edit Product -->
+  <div id="productModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-extrabold text-stone-900">Thêm Sản Phẩm Mới</h3>
+        <button onclick="closeProductModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateProduct(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Tên món thức uống / bánh</label>
+          <input type="text" id="prodNameInput" required placeholder="VD: Trà Đào Cam Sả"
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Danh mục</label>
+          <select id="prodCategorySelect" required class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+            <!-- Dynamic categories -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Giá bán cơ bản (VNĐ)</label>
+          <input type="number" id="prodPriceInput" required min="1000" step="1000" placeholder="35000"
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-bold text-sm outline-none">
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition">
+            Lưu Sản Phẩm
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Stock Adjustment (INV-03) -->
+  <div id="adjustModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-extrabold text-stone-900">Cân Chỉnh Kho Nguyên Liệu</h3>
+        <button onclick="closeAdjustModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleStockAdjust(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Chọn nguyên liệu</label>
+          <select id="adjustIngredientSelect" required class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-amber-500 font-medium outline-none">
+            <!-- Dynamic ingredients -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Số lượng thay đổi (dương là nhập thêm, âm là hao hụt)</label>
+          <input type="number" id="adjustAmountInput" required step="0.1" placeholder="VD: 500 hoặc -50"
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-amber-500 font-bold text-sm outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Loại biến động</label>
+          <select id="adjustTypeSelect" class="w-full px-4 py-2.5 rounded-xl border border-stone-300 font-medium outline-none">
+            <option value="PURCHASE_RECEIPT">Nhập kho từ nhà cung cấp</option>
+            <option value="ADJUSTMENT">Kiểm kê cân chỉnh</option>
+            <option value="WASTE">Hao hụt / Làm rơi đổ</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Lý do điều chỉnh</label>
+          <input type="text" id="adjustReasonInput" placeholder="VD: Nhập lô hàng tuần 45"
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 font-medium outline-none">
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-lg shadow-amber-600/20 transition">
+            Xác Nhận Cân Chỉnh Kho
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let token = localStorage.getItem('auth_token');
+    let user = JSON.parse(localStorage.getItem('auth_user') || 'null');
+    let currentTab = 'analytics';
+    let chartPayment = null;
+    let chartTop = null;
+
+    let analyticsData = null;
+    let products = [];
+    let categories = [];
+    let ingredients = [];
+    let areas = [];
+    let tables = [];
+    let orders = [];
+
+    // Auth verification
+    if (!token || !user) {
+      window.location.href = '/login.html?redirect=/admin.html';
+    }
+
+    document.getElementById('adminUserLbl').textContent = user ? user.username : 'Admin';
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+
+    async function init() {
+      await loadAllData();
+      renderAnalytics();
+    }
+
+    async function refreshData() {
+      await loadAllData();
+      switchTab(currentTab);
+      Swal.fire({ icon: 'success', title: 'Đã làm mới dữ liệu!', timer: 1000, showConfirmButton: false });
+    }
+
+    async function loadAllData() {
+      try {
+        const [resAna, resProd, resCat, resIng, resArea, resTab, resOrd] = await Promise.all([
+          fetch('/api/v1/orders/analytics/summary', { headers: authHeaders() }).catch(() => null),
+          fetch('/api/v1/products', { headers: authHeaders() }),
+          fetch('/api/v1/categories', { headers: authHeaders() }),
+          fetch('/api/v1/inventory/ingredients', { headers: authHeaders() }),
+          fetch('/api/v1/areas', { headers: authHeaders() }),
+          fetch('/api/v1/tables', { headers: authHeaders() }),
+          fetch('/api/v1/orders?limit=50', { headers: authHeaders() })
+        ]);
+
+        if (resAna && resAna.ok) {
+          analyticsData = (await resAna.json()).data;
+        }
+        products = (await resProd.json()).data || [];
+        categories = (await resCat.json()).data || [];
+        ingredients = (await resIng.json()).data || [];
+        areas = (await resArea.json()).data || [];
+        tables = (await resTab.json()).data || [];
+        orders = (await resOrd.json()).data || [];
+
+        // Check safety alerts
+        const safetyAlerts = ingredients.filter(i => i.isSafetyAlert).length;
+        const navBadge = document.getElementById('navSafetyBadge');
+        if (safetyAlerts > 0) {
+          navBadge.textContent = safetyAlerts;
+          navBadge.classList.remove('hidden');
+        } else {
+          navBadge.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error('Lỗi nạp dữ liệu:', err);
+      }
+    }
+
+    function switchTab(tabId) {
+      currentTab = tabId;
+
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.className = 'nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-stone-400 hover:text-white hover:bg-stone-800';
+      });
+
+      const activeContent = document.getElementById(`tab-${tabId}`);
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      const activeNav = document.getElementById(`nav-${tabId}`);
+      if (activeNav) {
+        activeNav.className = 'nav-btn w-full px-4 py-3 rounded-xl transition flex items-center gap-3 text-white bg-indigo-600 shadow-md shadow-indigo-600/20';
+      }
+
+      if (tabId === 'analytics') renderAnalytics();
+      if (tabId === 'products') renderProducts();
+      if (tabId === 'inventory') renderInventory();
+      if (tabId === 'tables') renderTables();
+      if (tabId === 'orders') renderOrders();
+    }
+
+    // 1. Render Analytics Tab
+    function renderAnalytics() {
+      if (!analyticsData) return;
+
+      document.getElementById('kpiTotalRevenue').textContent = `${analyticsData.totalRevenue.toLocaleString()}đ`;
+      document.getElementById('kpiTotalOrders').textContent = analyticsData.paidOrdersCount;
+      document.getElementById('kpiPendingOrders').textContent = `${analyticsData.pendingOrdersCount} đơn chờ xử lý`;
+      document.getElementById('kpiQrRevenue').textContent = `${analyticsData.qrRevenue.toLocaleString()}đ`;
+      document.getElementById('kpiCashRevenue').textContent = `Tiền mặt: ${analyticsData.cashRevenue.toLocaleString()}đ`;
+
+      const safetyAlerts = ingredients.filter(i => i.isSafetyAlert).length;
+      document.getElementById('kpiSafetyAlert').textContent = safetyAlerts;
+
+      // Chart 1: Revenue Payment
+      const ctxPay = document.getElementById('revenuePaymentChart').getContext('2d');
+      if (chartPayment) chartPayment.destroy();
+
+      chartPayment = new Chart(ctxPay, {
+        type: 'bar',
+        data: {
+          labels: ['SePay VietQR', 'Tiền Mặt (Cash)', 'Thẻ (Card)'],
+          datasets: [{
+            label: 'Doanh thu (VNĐ)',
+            data: [analyticsData.qrRevenue, analyticsData.cashRevenue, analyticsData.cardRevenue || 0],
+            backgroundColor: ['#10b981', '#f59e0b', '#6366f1'],
+            borderRadius: 12
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              ticks: { callback: v => v.toLocaleString() + 'đ' },
+              grid: { color: '#f3f4f6' }
+            },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+
+      // Chart 2: Top Products
+      const ctxTop = document.getElementById('topProductsChart').getContext('2d');
+      if (chartTop) chartTop.destroy();
+
+      const topLabels = analyticsData.topProducts.map(p => p.name);
+      const topValues = analyticsData.topProducts.map(p => p.quantity);
+
+      chartTop = new Chart(ctxTop, {
+        type: 'doughnut',
+        data: {
+          labels: topLabels.length ? topLabels : ['Chưa có đơn'],
+          datasets: [{
+            data: topValues.length ? topValues : [1],
+            backgroundColor: ['#6366f1', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+          }
+        }
+      });
+    }
+
+    // 2. Render Products
+    function renderProducts() {
+      const tbody = document.getElementById('productTableBody');
+      tbody.innerHTML = products.map(p => {
+        const cat = categories.find(c => c.id === p.categoryId);
+        return `
+          <tr class="hover:bg-stone-50 transition">
+            <td class="p-4 pl-6 font-bold text-stone-900">${p.name}</td>
+            <td class="p-4 text-stone-600 font-semibold">${cat ? cat.name : '—'}</td>
+            <td class="p-4 font-extrabold text-amber-600">${Number(p.basePrice).toLocaleString()}đ</td>
+            <td class="p-4">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${p.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600'}">
+                ${p.isActive ? 'Đang bán' : 'Tạm dừng'}
+              </span>
+            </td>
+            <td class="p-4 text-right pr-6">
+              <button onclick="deleteProduct('${p.id}')" class="text-stone-400 hover:text-rose-600 transition">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openProductModal() {
+      const select = document.getElementById('prodCategorySelect');
+      select.innerHTML = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      document.getElementById('productModal').classList.remove('hidden');
+    }
+
+    function closeProductModal() {
+      document.getElementById('productModal').classList.add('hidden');
+    }
+
+    async function handleCreateProduct(e) {
+      e.preventDefault();
+      const name = document.getElementById('prodNameInput').value.trim();
+      const categoryId = document.getElementById('prodCategorySelect').value;
+      const basePrice = Number(document.getElementById('prodPriceInput').value);
+
+      try {
+        const res = await fetch('/api/v1/products', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ name, categoryId, basePrice, isActive: true })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || 'Lỗi thêm món');
+
+        Swal.fire({ icon: 'success', title: 'Thêm sản phẩm thành công', timer: 1200, showConfirmButton: false });
+        closeProductModal();
+        await loadAllData();
+        renderProducts();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    async function deleteProduct(id) {
+      const confirm = await Swal.fire({
+        title: 'Xóa sản phẩm?',
+        text: 'Món này sẽ bị ngưng kinh doanh',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Hủy'
+      });
+      if (!confirm.isConfirmed) return;
+
+      try {
+        await fetch(`/api/v1/products/${id}`, { method: 'DELETE', headers: authHeaders() });
+        Swal.fire({ icon: 'success', title: 'Đã xóa sản phẩm', timer: 1000, showConfirmButton: false });
+        await loadAllData();
+        renderProducts();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    // 3. Render Inventory
+    function renderInventory() {
+      const tbody = document.getElementById('inventoryTableBody');
+      tbody.innerHTML = ingredients.map(ing => {
+        const current = Number(ing.currentStock);
+        const safety = Number(ing.safetyStock);
+        const isAlert = ing.isSafetyAlert;
+
+        return `
+          <tr class="hover:bg-stone-50 transition">
+            <td class="p-4 pl-6 font-bold text-stone-900">${ing.name}</td>
+            <td class="p-4 font-semibold text-stone-600">${ing.unit}</td>
+            <td class="p-4 font-extrabold ${isAlert ? 'text-rose-600' : 'text-stone-900'}">${current.toLocaleString()}</td>
+            <td class="p-4 text-stone-500">${safety.toLocaleString()}</td>
+            <td class="p-4 text-stone-700">${Number(ing.costPrice).toLocaleString()}đ</td>
+            <td class="p-4">
+              ${isAlert ?
+                '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sắp hết hàng</span>' :
+                '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800"><i class="fa-solid fa-check mr-1"></i>Đầy đủ</span>'
+              }
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openAdjustModal() {
+      const select = document.getElementById('adjustIngredientSelect');
+      select.innerHTML = ingredients.map(i => `<option value="${i.id}">${i.name} (Hiện có: ${Number(i.currentStock)} ${i.unit})</option>`).join('');
+      document.getElementById('adjustModal').classList.remove('hidden');
+    }
+
+    function closeAdjustModal() {
+      document.getElementById('adjustModal').classList.add('hidden');
+    }
+
+    async function handleStockAdjust(e) {
+      e.preventDefault();
+      const ingredientId = document.getElementById('adjustIngredientSelect').value;
+      const changeAmount = Number(document.getElementById('adjustAmountInput').value);
+      const type = document.getElementById('adjustTypeSelect').value;
+      const reason = document.getElementById('adjustReasonInput').value;
+
+      try {
+        const res = await fetch('/api/v1/inventory/adjust', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ ingredientId, changeAmount, type, reason })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || 'Lỗi cập nhật kho');
+
+        Swal.fire({ icon: 'success', title: 'Cân chỉnh kho thành công', timer: 1200, showConfirmButton: false });
+        closeAdjustModal();
+        await loadAllData();
+        renderInventory();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    // 4. Render Tables
+    function renderTables() {
+      const wrapper = document.getElementById('adminAreaList');
+      wrapper.innerHTML = areas.map(area => {
+        const areaTables = tables.filter(t => t.areaId === area.id);
+        return `
+          <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm">
+            <h4 class="text-sm font-extrabold text-stone-800 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-layer-group text-indigo-600"></i>
+              <span>${area.name}</span>
+            </h4>
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              ${areaTables.map(t => `
+                <div class="p-3 rounded-2xl border text-center ${t.status === 'OCCUPIED' ? 'bg-rose-50 border-rose-300 text-rose-800' : 'bg-stone-50 border-stone-200 text-stone-800'}">
+                  <p class="font-extrabold text-base">Bàn ${t.tableNumber}</p>
+                  <p class="text-[10px] text-stone-500 mt-0.5">${t.capacity} chỗ • ${t.status}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 5. Render Orders History
+    function renderOrders() {
+      const tbody = document.getElementById('ordersTableBody');
+      tbody.innerHTML = orders.map(o => `
+        <tr class="hover:bg-stone-50 transition">
+          <td class="p-4 pl-6 font-bold text-stone-900">#${o.id.slice(0, 8)}</td>
+          <td class="p-4 text-stone-500">${new Date(o.createdAt).toLocaleString('vi-VN')}</td>
+          <td class="p-4 text-stone-700 font-medium">${o.cashierUsername || '—'}</td>
+          <td class="p-4 font-semibold text-stone-700">${o.orderType === 'DINE_IN' ? (o.tableNumber ? `Bàn ${o.tableNumber}` : 'Tại bàn') : 'Mang đi'}</td>
+          <td class="p-4 font-extrabold text-amber-600">${Number(o.totalAmount).toLocaleString()}đ</td>
+          <td class="p-4 font-bold text-stone-800">${o.paymentMethod || '—'}</td>
+          <td class="p-4">
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+              o.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' :
+              o.status === 'PENDING' ? 'bg-amber-100 text-amber-800' :
+              o.status === 'CANCELLED' ? 'bg-rose-100 text-rose-800' : 'bg-stone-100 text-stone-800'
+            }">
+              ${o.status}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function logout() {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.location.href = '/login.html';
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS Thu Ngân - The Coffee Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-stone-100 text-stone-900 h-screen flex flex-col overflow-hidden">
+  <!-- Top Bar -->
+  <header class="bg-white border-b border-stone-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm z-20">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-amber-600/30">
+        <i class="fa-solid fa-mug-hot"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-extrabold tracking-tight text-stone-900 leading-none">THE COFFEE LAB</h1>
+        <p class="text-[11px] font-semibold text-amber-600 tracking-wider uppercase mt-1">POS Quầy Thu Ngân</p>
+      </div>
+
+      <!-- Shift Status Badge -->
+      <div id="shiftBadge" class="ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-stone-100 text-stone-600">
+        <span class="w-2 h-2 rounded-full bg-stone-400"></span>
+        <span>Đang tải ca...</span>
+      </div>
+    </div>
+
+    <!-- Right Header Actions -->
+    <div class="flex items-center gap-3">
+      <!-- Quick Nav -->
+      <a href="/kds.html" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-blender text-emerald-600"></i>
+        <span>Màn Hình Bếp (KDS)</span>
+      </a>
+      <a href="/admin.html" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-700 transition flex items-center gap-2">
+        <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+        <span>HQ Dashboard</span>
+      </a>
+
+      <!-- Shift Action Button -->
+      <button id="btnShiftToggle" onclick="handleShiftAction()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 transition flex items-center gap-1.5 border border-amber-200">
+        <i class="fa-solid fa-clock"></i>
+        <span id="shiftBtnText">Ca làm việc</span>
+      </button>
+
+      <!-- Cashier User Info -->
+      <div class="flex items-center gap-2.5 pl-3 border-l border-stone-200">
+        <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+          <i class="fa-solid fa-user"></i>
+        </div>
+        <div class="text-left leading-tight hidden sm:block">
+          <p id="cashierName" class="text-xs font-bold text-stone-800">Thu ngân</p>
+          <button onclick="logout()" class="text-[10px] text-rose-600 hover:underline font-semibold">Đăng xuất</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main POS Area: Left 65% (Menu & Tables) | Right 35% (Cart) -->
+  <main class="flex-1 flex overflow-hidden">
+    <!-- Left Section: Catalog & Tables -->
+    <section class="flex-1 flex flex-col border-r border-stone-200 bg-stone-50 overflow-hidden">
+      <!-- Navigation Bar (Menu vs Tables & Search) -->
+      <div class="bg-white border-b border-stone-200 p-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <!-- Switch Tabs -->
+        <div class="flex rounded-xl bg-stone-100 p-1">
+          <button id="tabMenuBtn" onclick="switchMainTab('menu')" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-white text-stone-900 shadow-sm flex items-center gap-2">
+            <i class="fa-solid fa-mug-saucer text-amber-600"></i>
+            <span>Thực Đơn (Menu)</span>
+          </button>
+          <button id="tabTablesBtn" onclick="switchMainTab('tables')" class="px-4 py-2 rounded-lg text-xs font-bold transition text-stone-600 hover:text-stone-900 flex items-center gap-2">
+            <i class="fa-solid fa-chair text-amber-600"></i>
+            <span>Sơ Đồ Bàn</span>
+            <span id="tableOccupiedBadge" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-extrabold hidden">0</span>
+          </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative w-72">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-stone-400">
+            <i class="fa-solid fa-magnifying-glass text-xs"></i>
+          </span>
+          <input type="text" id="searchInput" oninput="filterProducts()" placeholder="Tìm món nhanh (tên, mã)..."
+            class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-stone-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-stone-50 outline-none transition font-medium">
+        </div>
+      </div>
+
+      <!-- Tab Content 1: MENU -->
+      <div id="tabMenuContent" class="flex-1 flex flex-col overflow-hidden">
+        <!-- Category Horizontal Filter -->
+        <div class="bg-white/80 border-b border-stone-200 px-4 py-2.5 overflow-x-auto no-scrollbar flex items-center gap-2 shrink-0" id="categoryList">
+          <button onclick="selectCategory(null)" class="category-btn active px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-amber-600 text-white shadow-sm">
+            Tất Cả
+          </button>
+          <!-- Dynamic categories injected here -->
+        </div>
+
+        <!-- Product Grid -->
+        <div class="flex-1 p-4 overflow-y-auto" id="productGridWrapper">
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3.5" id="productGrid">
+            <!-- Dynamic products injected here -->
+          </div>
+          <div id="emptyProductAlert" class="hidden text-center py-16 text-stone-400">
+            <i class="fa-solid fa-mug-saucer text-4xl mb-3"></i>
+            <p class="text-sm font-semibold">Không tìm thấy món nào phù hợp</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: TABLES -->
+      <div id="tabTablesContent" class="flex-1 p-6 overflow-y-auto hidden">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-xl font-bold text-stone-900">Sơ Đồ Bàn Tại Chỗ (Dine-in)</h2>
+            <p class="text-xs text-stone-500 mt-0.5">Chọn bàn để gắn vào đơn hàng hiện tại</p>
+          </div>
+          <!-- Legend -->
+          <div class="flex items-center gap-4 text-xs font-semibold">
+            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-emerald-500"></span> Trống (EMPTY)</div>
+            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-rose-500"></span> Đang có khách (OCCUPIED)</div>
+            <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-amber-500"></span> Đã đặt (RESERVED)</div>
+          </div>
+        </div>
+
+        <div id="areaTableList" class="space-y-8">
+          <!-- Dynamic tables by areas -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Section: Order Cart & Billing (35% Width) -->
+    <aside class="w-96 lg:w-[420px] bg-white flex flex-col justify-between shrink-0 shadow-xl border-l border-stone-200 z-10">
+      <!-- Cart Header -->
+      <div class="p-4 border-b border-stone-200 shrink-0">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-extrabold text-stone-900 uppercase tracking-wider">Đơn Hàng Hiện Tại</span>
+            <span id="cartCountBadge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800">0 món</span>
+          </div>
+          <button onclick="clearCart()" class="text-xs text-rose-600 hover:text-rose-700 font-bold transition flex items-center gap-1">
+            <i class="fa-solid fa-trash-can text-[11px]"></i> Xóa giỏ
+          </button>
+        </div>
+
+        <!-- Dine-in vs Take-away selection -->
+        <div class="grid grid-cols-2 gap-2 bg-stone-100 p-1 rounded-xl">
+          <button id="btnDineIn" onclick="setOrderType('DINE_IN')" class="py-2 text-xs font-bold rounded-lg transition bg-white text-amber-700 shadow-sm flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-chair"></i>
+            <span id="selectedTableLabel">Tại Bàn</span>
+          </button>
+          <button id="btnTakeAway" onclick="setOrderType('TAKE_AWAY')" class="py-2 text-xs font-bold rounded-lg transition text-stone-600 hover:text-stone-900 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-bag-shopping"></i>
+            <span>Mang Đi</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cart Item List -->
+      <div class="flex-1 p-4 overflow-y-auto space-y-3" id="cartItemList">
+        <div id="cartEmptyState" class="h-full flex flex-col items-center justify-center text-stone-400 py-12">
+          <div class="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-300 text-2xl mb-3">
+            <i class="fa-solid fa-cart-shopping"></i>
+          </div>
+          <p class="text-sm font-semibold text-stone-500">Giỏ hàng đang trống</p>
+          <p class="text-xs text-stone-400 mt-1">Chạm vào sản phẩm trên thực đơn để thêm món</p>
+        </div>
+      </div>
+
+      <!-- Billing Summary & Action Buttons -->
+      <div class="p-5 border-t border-stone-200 bg-stone-50/70 shrink-0 space-y-4">
+        <!-- Totals calculation -->
+        <div class="space-y-1.5 text-xs text-stone-600">
+          <div class="flex justify-between">
+            <span>Tạm tính:</span>
+            <span id="lblSubtotal" class="font-bold text-stone-800">0đ</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Chiết khấu / Giảm giá:</span>
+            <span id="lblDiscount" class="font-bold text-emerald-600">0đ</span>
+          </div>
+          <div class="flex justify-between text-base font-extrabold text-stone-900 pt-2 border-t border-stone-200">
+            <span>TỔNG THANH TOÁN:</span>
+            <span id="lblTotal" class="text-amber-600 text-xl font-extrabold">0đ</span>
+          </div>
+        </div>
+
+        <!-- Checkout Buttons -->
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <!-- Cash Payment -->
+          <button onclick="handlePayCash()" id="btnPayCash" disabled
+            class="py-3.5 px-3 rounded-2xl bg-stone-800 hover:bg-stone-900 disabled:opacity-50 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-money-bill-wave text-emerald-400 text-sm"></i>
+            <span>Tiền Mặt (Cash)</span>
+          </button>
+
+          <!-- SePay VietQR Payment -->
+          <button onclick="handlePayQr()" id="btnPayQr" disabled
+            class="py-3.5 px-3 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 text-white font-bold text-xs transition shadow-lg shadow-amber-600/25 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-qrcode text-sm"></i>
+            <span>Quét QR SePay</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- MODAL: SePay Dynamic VietQR Payment (POS-04) -->
+  <div id="sepayQrModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 text-center relative animate-scaleUp">
+      <button onclick="closeQrModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-sm font-bold">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-3">
+        <i class="fa-solid fa-qrcode"></i>
+      </div>
+      <h3 class="text-xl font-extrabold text-stone-900">Quét QR Thanh Toán SePay</h3>
+      <p class="text-xs text-stone-500 mt-1">Mở ứng dụng ngân hàng hoặc Momo để quét VietQR</p>
+
+      <!-- QR Code Image Card -->
+      <div class="my-5 p-4 rounded-2xl bg-amber-50/50 border-2 border-dashed border-amber-200 inline-block relative">
+        <img id="qrImageElement" src="" alt="SePay VietQR" class="w-56 h-56 mx-auto rounded-xl shadow-md object-contain">
+        <!-- Floating Waiting Badge -->
+        <div id="qrLoadingBadge" class="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-600 text-white rounded-full text-[11px] font-bold shadow-md flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>Đang chờ khách chuyển khoản...</span>
+        </div>
+      </div>
+
+      <!-- Payment Transfer Details -->
+      <div class="bg-stone-50 rounded-2xl p-4 text-xs space-y-2 text-left border border-stone-200/70 mb-5">
+        <div class="flex justify-between">
+          <span class="text-stone-500">Số tiền:</span>
+          <span id="qrAmountLbl" class="font-bold text-amber-600 text-sm">0đ</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-stone-500">Ngân hàng thụ hưởng:</span>
+          <span id="qrBankLbl" class="font-bold text-stone-800">MBBank</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-stone-500">Số tài khoản:</span>
+          <span id="qrAccountLbl" class="font-bold text-stone-800">0388999999</span>
+        </div>
+        <div class="flex justify-between items-center bg-amber-100/60 p-2 rounded-xl">
+          <span class="text-stone-600 font-bold">Nội dung chuyển khoản:</span>
+          <span id="qrDesLbl" class="font-extrabold text-amber-900 text-xs tracking-wider">DH...</span>
+        </div>
+      </div>
+
+      <!-- Simulated Manual Confirm for Testing -->
+      <div class="flex gap-2">
+        <button onclick="simulateCustomerPaid()" class="flex-1 py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 transition">
+          <i class="fa-solid fa-bolt mr-1"></i> Giả lập tiền về
+        </button>
+        <button onclick="closeQrModal()" class="py-2.5 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs transition">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Open/Close Shift (Ca làm việc) -->
+  <div id="shiftModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center animate-scaleUp">
+      <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-3">
+        <i class="fa-solid fa-clock"></i>
+      </div>
+      <h3 id="shiftModalTitle" class="text-lg font-bold text-stone-900">Quản Lý Ca Làm Việc</h3>
+      <p id="shiftModalDesc" class="text-xs text-stone-500 mt-1 mb-4">Vui lòng nhập số tiền mặt để mở ca</p>
+
+      <div class="mb-5 text-left">
+        <label id="shiftModalInputLabel" class="block text-xs font-bold text-stone-700 mb-1.5">Số tiền mặt ban đầu (VNĐ)</label>
+        <input type="number" id="shiftCashInput" value="1000000" step="10000"
+          class="w-full px-4 py-3 rounded-xl border border-stone-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-sm font-bold text-stone-900 outline-none">
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="closeShiftModal()" class="flex-1 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition">
+          Hủy
+        </button>
+        <button id="btnSubmitShift" onclick="submitShiftAction()" class="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-md shadow-amber-600/30">
+          Xác Nhận
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // App State
+    let token = localStorage.getItem('auth_token');
+    let user = JSON.parse(localStorage.getItem('auth_user') || 'null');
+    let currentShift = null;
+    let categories = [];
+    let products = [];
+    let tables = [];
+    let areas = [];
+    let cart = [];
+    let selectedCategory = null;
+    let orderType = 'DINE_IN';
+    let selectedTable = null;
+    let activeQrPollingInterval = null;
+    let activeOrderId = null;
+    let socket = null;
+
+    // Check Auth
+    if (!token || !user) {
+      window.location.href = '/login.html?redirect=/pos.html';
+    }
+
+    document.getElementById('cashierName').textContent = user ? user.username : 'Thu ngân';
+
+    function authHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+
+    // Init Application
+    async function init() {
+      await loadShift();
+      await loadCategories();
+      await loadProducts();
+      await loadAreasAndTables();
+      initKdsSocket();
+    }
+
+    // WebSockets connection to /kds namespace
+    function initKdsSocket() {
+      try {
+        socket = io('/kds');
+        socket.on('connect', () => {
+          console.log('[KDS Socket] POS đã kết nối tới /kds:', socket.id);
+        });
+
+        // Lắng nghe sự kiện đơn hàng đã thanh toán thành công (qua SePay QR hoặc Cash)
+        socket.on('order.paid', (payload) => {
+          console.log('[KDS Socket] Nhận sự kiện order.paid:', payload);
+          if (activeOrderId && payload.orderId === activeOrderId) {
+            handlePaymentConfirmed(payload);
+          }
+        });
+      } catch (err) {
+        console.warn('Socket connection error:', err);
+      }
+    }
+
+    // 1. Shift Management
+    async function loadShift() {
+      try {
+        const res = await fetch('/api/v1/shifts/current', { headers: authHeaders() });
+        const json = await res.json();
+        const data = json.data || json;
+
+        const badge = document.getElementById('shiftBadge');
+        const btnText = document.getElementById('shiftBtnText');
+
+        if (res.ok && data && data.status === 'OPEN') {
+          currentShift = data;
+          badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-emerald-100 text-emerald-800';
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Ca Mở: ${Number(data.startingCash).toLocaleString()}đ</span>`;
+          btnText.textContent = 'Chốt Ca';
+        } else {
+          currentShift = null;
+          badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-rose-100 text-rose-800';
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Chưa Mở Ca</span>`;
+          btnText.textContent = 'Mở Ca Mới';
+        }
+      } catch (err) {
+        console.error('Lỗi tải ca:', err);
+      }
+    }
+
+    function handleShiftAction() {
+      const modal = document.getElementById('shiftModal');
+      const title = document.getElementById('shiftModalTitle');
+      const desc = document.getElementById('shiftModalDesc');
+      const label = document.getElementById('shiftModalInputLabel');
+      const input = document.getElementById('shiftCashInput');
+      const btn = document.getElementById('btnSubmitShift');
+
+      if (!currentShift) {
+        title.textContent = 'Mở Ca Làm Việc Mới';
+        desc.textContent = 'Nhập tiền mặt đầu ca để bắt đầu tạo đơn';
+        label.textContent = 'Tiền mặt đầu ca (VNĐ):';
+        input.value = '1000000';
+        btn.textContent = 'Mở Ca';
+      } else {
+        title.textContent = 'Chốt Ca Làm Việc Hiện Tại';
+        desc.textContent = 'Nhập số tiền mặt thực tế kiểm đếm trong két lúc giao ca';
+        label.textContent = 'Tiền mặt cuối ca thực tế (VNĐ):';
+        input.value = '';
+        btn.textContent = 'Chốt Ca';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeShiftModal() {
+      document.getElementById('shiftModal').classList.add('hidden');
+    }
+
+    async function submitShiftAction() {
+      const input = document.getElementById('shiftCashInput');
+      const amount = Number(input.value);
+
+      if (isNaN(amount) || amount < 0) {
+        Swal.fire({ icon: 'warning', title: 'Vui lòng nhập số tiền hợp lệ' });
+        return;
+      }
+
+      try {
+        if (!currentShift) {
+          // Open shift
+          const res = await fetch('/api/v1/shifts/open', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ startingCash: amount })
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.message || 'Mở ca thất bại');
+          Swal.fire({ icon: 'success', title: 'Mở ca thành công!', timer: 1200, showConfirmButton: false });
+        } else {
+          // Close shift
+          const res = await fetch('/api/v1/shifts/close', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ actualEndingCash: amount })
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.message || 'Chốt ca thất bại');
+          const data = json.data || json;
+          Swal.fire({
+            icon: 'info',
+            title: 'Chốt ca thành công',
+            html: `
+              <p>Tổng tiền mặt dự kiến: <b>${data.shiftAudit.expectedEndingCash.toLocaleString()}đ</b></p>
+              <p>Thực tế kiểm đếm: <b>${data.shiftAudit.actualEndingCash.toLocaleString()}đ</b></p>
+              <p>Chênh lệch: <b class="${data.shiftAudit.cashDiscrepancy < 0 ? 'text-red-500' : 'text-emerald-600'}">${data.shiftAudit.cashDiscrepancy.toLocaleString()}đ</b></p>
+            `
+          });
+        }
+        closeShiftModal();
+        await loadShift();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    // 2. Categories & Products
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/v1/categories', { headers: authHeaders() });
+        const json = await res.json();
+        categories = json.data || json || [];
+        renderCategories();
+      } catch (err) {
+        console.error('Lỗi load categories:', err);
+      }
+    }
+
+    function renderCategories() {
+      const list = document.getElementById('categoryList');
+      list.innerHTML = `
+        <button onclick="selectCategory(null)" class="category-btn ${selectedCategory === null ? 'active bg-amber-600 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'} px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap shadow-sm">
+          Tất Cả
+        </button>
+      `;
+
+      categories.forEach(cat => {
+        const isActive = selectedCategory === cat.id;
+        list.innerHTML += `
+          <button onclick="selectCategory('${cat.id}')" class="category-btn ${isActive ? 'active bg-amber-600 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'} px-4 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap shadow-sm">
+            ${cat.name}
+          </button>
+        `;
+      });
+    }
+
+    function selectCategory(catId) {
+      selectedCategory = catId;
+      renderCategories();
+      filterProducts();
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/v1/products', { headers: authHeaders() });
+        const json = await res.json();
+        products = json.data || json || [];
+        renderProducts(products);
+      } catch (err) {
+        console.error('Lỗi load products:', err);
+      }
+    }
+
+    function filterProducts() {
+      const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+      let filtered = products;
+
+      if (selectedCategory) {
+        filtered = filtered.filter(p => p.categoryId === selectedCategory);
+      }
+
+      if (keyword) {
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(keyword));
+      }
+
+      renderProducts(filtered);
+    }
+
+    function renderProducts(items) {
+      const grid = document.getElementById('productGrid');
+      const emptyAlert = document.getElementById('emptyProductAlert');
+
+      if (!items || items.length === 0) {
+        grid.innerHTML = '';
+        emptyAlert.classList.remove('hidden');
+        return;
+      }
+
+      emptyAlert.classList.add('hidden');
+      grid.innerHTML = items.map(p => {
+        const price = Number(p.basePrice).toLocaleString();
+        return `
+          <div onclick="addToCart('${p.id}')" class="group bg-white rounded-2xl p-3.5 border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-400 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between select-none">
+            <div>
+              <div class="w-full aspect-[4/3] rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-700 flex items-center justify-center text-3xl mb-2.5 transition">
+                <i class="fa-solid fa-mug-saucer"></i>
+              </div>
+              <h4 class="text-xs font-bold text-stone-900 leading-snug line-clamp-2">${p.name}</h4>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between">
+              <span class="text-xs font-extrabold text-amber-600">${price}đ</span>
+              <span class="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-[10px] group-hover:bg-amber-600 group-hover:text-white transition">
+                <i class="fa-solid fa-plus"></i>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 3. Areas & Tables
+    async function loadAreasAndTables() {
+      try {
+        const [resAreas, resTables] = await Promise.all([
+          fetch('/api/v1/areas', { headers: authHeaders() }),
+          fetch('/api/v1/tables', { headers: authHeaders() })
+        ]);
+        areas = (await resAreas.json()).data || [];
+        tables = (await resTables.json()).data || [];
+
+        renderTables();
+      } catch (err) {
+        console.error('Lỗi load tables:', err);
+      }
+    }
+
+    function renderTables() {
+      const wrapper = document.getElementById('areaTableList');
+      if (!areas.length) {
+        wrapper.innerHTML = '<p class="text-stone-400 text-sm">Chưa có khu vực và bàn nào</p>';
+        return;
+      }
+
+      let occupiedCount = 0;
+
+      wrapper.innerHTML = areas.map(area => {
+        const areaTables = tables.filter(t => t.areaId === area.id);
+        const tablesHtml = areaTables.map(t => {
+          if (t.status === 'OCCUPIED') occupiedCount++;
+          const isSelected = selectedTable && selectedTable.id === t.id;
+
+          let colorClass = 'bg-white border-emerald-300 text-emerald-800 hover:border-emerald-500';
+          let statusBadge = '<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">Trống</span>';
+
+          if (t.status === 'OCCUPIED') {
+            colorClass = 'bg-rose-50/50 border-rose-300 text-rose-800 hover:border-rose-500';
+            statusBadge = '<span class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-bold">Có khách</span>';
+          } else if (t.status === 'RESERVED') {
+            colorClass = 'bg-amber-50/50 border-amber-300 text-amber-800 hover:border-amber-500';
+            statusBadge = '<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[10px] font-bold">Đã đặt</span>';
+          }
+
+          if (isSelected) {
+            colorClass = 'bg-amber-100 border-2 border-amber-600 text-amber-900 shadow-md';
+          }
+
+          return `
+            <div onclick="selectTable('${t.id}')" class="p-4 rounded-2xl border-2 ${colorClass} cursor-pointer transition select-none flex flex-col justify-between h-28">
+              <div class="flex items-center justify-between">
+                <span class="text-base font-extrabold">Bàn ${t.tableNumber}</span>
+                <span class="text-[11px] font-semibold text-stone-500"><i class="fa-solid fa-users text-[10px]"></i> ${t.capacity}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                ${statusBadge}
+                ${isSelected ? '<i class="fa-solid fa-circle-check text-amber-600 text-sm"></i>' : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div>
+            <h3 class="text-sm font-extrabold text-stone-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-layer-group text-amber-600"></i>
+              <span>${area.name}</span>
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              ${tablesHtml || '<p class="text-xs text-stone-400">Không có bàn nào trong khu vực này</p>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const badge = document.getElementById('tableOccupiedBadge');
+      if (occupiedCount > 0) {
+        badge.textContent = occupiedCount;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function selectTable(tableId) {
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+
+      selectedTable = table;
+      setOrderType('DINE_IN');
+      document.getElementById('selectedTableLabel').textContent = `Bàn ${table.tableNumber}`;
+      renderTables();
+      switchMainTab('menu');
+    }
+
+    function setOrderType(type) {
+      orderType = type;
+      const btnDine = document.getElementById('btnDineIn');
+      const btnTake = document.getElementById('btnTakeAway');
+
+      if (type === 'DINE_IN') {
+        btnDine.className = 'py-2 text-xs font-bold rounded-lg transition bg-white text-amber-700 shadow-sm flex items-center justify-center gap-1.5';
+        btnTake.className = 'py-2 text-xs font-bold rounded-lg transition text-stone-600 hover:text-stone-900 flex items-center justify-center gap-1.5';
+        if (!selectedTable) {
+          switchMainTab('tables');
+        }
+      } else {
+        selectedTable = null;
+        document.getElementById('selectedTableLabel').textContent = 'Tại Bàn';
+        btnTake.className = 'py-2 text-xs font-bold rounded-lg transition bg-white text-amber-700 shadow-sm flex items-center justify-center gap-1.5';
+        btnDine.className = 'py-2 text-xs font-bold rounded-lg transition text-stone-600 hover:text-stone-900 flex items-center justify-center gap-1.5';
+        renderTables();
+      }
+    }
+
+    function switchMainTab(tab) {
+      const btnMenu = document.getElementById('tabMenuBtn');
+      const btnTables = document.getElementById('tabTablesBtn');
+      const contentMenu = document.getElementById('tabMenuContent');
+      const contentTables = document.getElementById('tabTablesContent');
+
+      if (tab === 'menu') {
+        btnMenu.className = 'px-4 py-2 rounded-lg text-xs font-bold transition bg-white text-stone-900 shadow-sm flex items-center gap-2';
+        btnTables.className = 'px-4 py-2 rounded-lg text-xs font-bold transition text-stone-600 hover:text-stone-900 flex items-center gap-2';
+        contentMenu.classList.remove('hidden');
+        contentTables.classList.add('hidden');
+      } else {
+        btnTables.className = 'px-4 py-2 rounded-lg text-xs font-bold transition bg-white text-stone-900 shadow-sm flex items-center gap-2';
+        btnMenu.className = 'px-4 py-2 rounded-lg text-xs font-bold transition text-stone-600 hover:text-stone-900 flex items-center gap-2';
+        contentTables.classList.remove('hidden');
+        contentMenu.classList.add('hidden');
+      }
+    }
+
+    // 4. Cart Operations
+    function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+
+      const existing = cart.find(item => item.productId === productId);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        cart.push({
+          productId: product.id,
+          name: product.name,
+          basePrice: Number(product.basePrice),
+          quantity: 1,
+          modifiers: []
+        });
+      }
+      renderCart();
+    }
+
+    function updateCartQty(index, delta) {
+      if (cart[index]) {
+        cart[index].quantity += delta;
+        if (cart[index].quantity <= 0) {
+          cart.splice(index, 1);
+        }
+      }
+      renderCart();
+    }
+
+    function removeCartItem(index) {
+      cart.splice(index, 1);
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = [];
+      renderCart();
+    }
+
+    function renderCart() {
+      const list = document.getElementById('cartItemList');
+      const emptyState = document.getElementById('cartEmptyState');
+      const badge = document.getElementById('cartCountBadge');
+      const btnCash = document.getElementById('btnPayCash');
+      const btnQr = document.getElementById('btnPayQr');
+
+      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      badge.textContent = `${totalItems} món`;
+
+      if (cart.length === 0) {
+        list.innerHTML = '';
+        list.appendChild(emptyState);
+        emptyState.classList.remove('hidden');
+        document.getElementById('lblSubtotal').textContent = '0đ';
+        document.getElementById('lblTotal').textContent = '0đ';
+        btnCash.disabled = true;
+        btnQr.disabled = true;
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      let subtotal = 0;
+      list.innerHTML = cart.map((item, idx) => {
+        const itemTotal = item.basePrice * item.quantity;
+        subtotal += itemTotal;
+
+        return `
+          <div class="bg-stone-50 rounded-2xl p-3 border border-stone-200/80 flex items-center justify-between gap-2 text-xs">
+            <div class="flex-1">
+              <h5 class="font-bold text-stone-800 line-clamp-1">${item.name}</h5>
+              <p class="text-amber-700 font-semibold text-[11px] mt-0.5">${item.basePrice.toLocaleString()}đ</p>
+            </div>
+            <!-- Qty Stepper -->
+            <div class="flex items-center gap-1.5 bg-white border border-stone-200 rounded-xl p-1">
+              <button onclick="updateCartQty(${idx}, -1)" class="w-6 h-6 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center justify-center text-xs">-</button>
+              <span class="w-6 text-center font-bold text-stone-900">${item.quantity}</span>
+              <button onclick="updateCartQty(${idx}, 1)" class="w-6 h-6 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold flex items-center justify-center text-xs">+</button>
+            </div>
+            <!-- Price and Delete -->
+            <div class="text-right min-w-[65px]">
+              <p class="font-extrabold text-stone-900">${itemTotal.toLocaleString()}đ</p>
+              <button onclick="removeCartItem(${idx})" class="text-[10px] text-stone-400 hover:text-rose-500 font-bold mt-1">Xóa</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('lblSubtotal').textContent = `${subtotal.toLocaleString()}đ`;
+      document.getElementById('lblTotal').textContent = `${subtotal.toLocaleString()}đ`;
+      btnCash.disabled = false;
+      btnQr.disabled = false;
+    }
+
+    // 5. Checkout & SePay QR Flow (POS-04)
+    async function createOrderApi(paymentMethod = null) {
+      if (!currentShift) {
+        throw new Error('Vui lòng mở ca làm việc trước khi tạo đơn hàng');
+      }
+
+      if (orderType === 'DINE_IN' && !selectedTable) {
+        throw new Error('Vui lòng chọn Bàn cho đơn dùng tại chỗ');
+      }
+
+      const payload = {
+        shiftId: currentShift.id,
+        tableId: selectedTable ? selectedTable.id : undefined,
+        orderType: orderType,
+        paymentMethod: paymentMethod,
+        items: cart.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          modifiers: item.modifiers || []
+        }))
+      };
+
+      const res = await fetch('/api/v1/orders', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.message || 'Tạo đơn hàng thất bại');
+      }
+
+      return json.data || json;
+    }
+
+    // Cash Payment
+    async function handlePayCash() {
+      try {
+        const orderData = await createOrderApi('CASH');
+        const order = orderData.order || orderData;
+
+        // Confetti celebration
+        confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Thanh toán thành công!',
+          html: `
+            <p>Đơn hàng <b>#${order.id.slice(0, 8)}</b> đã được tạo và thanh toán Tiền mặt.</p>
+            <p class="text-xs text-stone-500 mt-2">Kho nguyên liệu BOM đã được khấu trừ tự động & KDS đã nhận đơn.</p>
+          `
+        });
+
+        clearCart();
+        await loadAreasAndTables();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    // SePay Dynamic VietQR Payment (POS-04)
+    async function handlePayQr() {
+      const btn = document.getElementById('btnPayQr');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Tạo VietQR...';
+
+      try {
+        // 1. Tạo đơn hàng PENDING
+        const orderData = await createOrderApi(null);
+        const order = orderData.order || orderData;
+        activeOrderId = order.id;
+
+        // 2. Gọi API sinh mã VietQR SePay
+        const qrRes = await fetch(`/api/v1/orders/${order.id}/generate-qr`, {
+          method: 'POST',
+          headers: authHeaders()
+        });
+        const qrJson = await qrRes.json();
+        if (!qrRes.ok) throw new Error(qrJson.message || 'Sinh mã QR thất bại');
+
+        const qrData = qrJson.data || qrJson;
+
+        // 3. Hiển thị Modal VietQR
+        document.getElementById('qrImageElement').src = qrData.qrUrl;
+        document.getElementById('qrAmountLbl').textContent = `${qrData.amount.toLocaleString()}đ`;
+        document.getElementById('qrBankLbl').textContent = qrData.bank;
+        document.getElementById('qrAccountLbl').textContent = qrData.accountNumber;
+        document.getElementById('qrDesLbl').textContent = qrData.description;
+
+        document.getElementById('sepayQrModal').classList.remove('hidden');
+
+        // 4. Khởi động Polling tra cứu trạng thái thanh toán làm fallback cho WebSocket
+        startPaymentPolling(order.id);
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi sinh QR', text: err.message });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-qrcode text-sm"></i><span>Quét QR SePay</span>';
+      }
+    }
+
+    function startPaymentPolling(orderId) {
+      if (activeQrPollingInterval) clearInterval(activeQrPollingInterval);
+
+      activeQrPollingInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/v1/payments/orders/${orderId}/status`, { headers: authHeaders() });
+          const json = await res.json();
+          const data = json.data || json;
+
+          if (data && data.isPaid) {
+            clearInterval(activeQrPollingInterval);
+            handlePaymentConfirmed({ orderId, paymentMethod: 'QR' });
+          }
+        } catch (err) {
+          console.warn('Lỗi polling:', err);
+        }
+      }, 2500);
+    }
+
+    function handlePaymentConfirmed(payload) {
+      if (activeQrPollingInterval) clearInterval(activeQrPollingInterval);
+      closeQrModal();
+
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Thanh toán SePay Thành Công!',
+        html: `
+          <p class="text-sm">Đã nhận thanh toán chuyển khoản cho đơn <b>#${payload.orderId.slice(0, 8)}</b></p>
+          <p class="text-xs text-stone-500 mt-2">Hệ thống đã tự động khấu trừ kho BOM & phát tín hiệu cho Barista chế biến.</p>
+        `
+      });
+
+      clearCart();
+      loadAreasAndTables();
+    }
+
+    // Giả lập tiền về SePay cho mục đích test tại chỗ
+    async function simulateCustomerPaid() {
+      if (!activeOrderId) return;
+      try {
+        const order = cart.length ? cart : [];
+        const des = document.getElementById('qrDesLbl').textContent;
+        const amount = parseInt(document.getElementById('qrAmountLbl').textContent.replace(/[^\d]/g, ''), 10);
+
+        const res = await fetch('/api/v1/payments/sepay-webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: Math.floor(Math.random() * 1000000),
+            gateway: 'MBBank',
+            transactionDate: new Date().toISOString(),
+            accountNumber: '0388999999',
+            code: des,
+            content: `${des} CHUYEN TIEN POS TEST`,
+            transferType: 'in',
+            transferAmount: amount
+          })
+        });
+
+        const json = await res.json();
+        console.log('Webhook test response:', json);
+      } catch (err) {
+        console.error('Lỗi giả lập:', err);
+      }
+    }
+
+    function closeQrModal() {
+      document.getElementById('sepayQrModal').classList.add('hidden');
+      if (activeQrPollingInterval) clearInterval(activeQrPollingInterval);
+      activeOrderId = null;
+    }
+
+    function logout() {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      window.location.href = '/login.html';
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
+

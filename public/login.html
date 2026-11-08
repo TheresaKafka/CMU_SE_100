@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Nhập - The Coffee Lab POS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-amber-50 via-stone-100 to-amber-100 min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-stone-200/80 p-8 sm:p-10 relative overflow-hidden">
+    <!-- Decorative top accent -->
+    <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700"></div>
+
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-3xl mx-auto mb-4 shadow-sm">
+        <i class="fa-solid fa-mug-saucer"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-stone-900 tracking-tight">THE COFFEE LAB</h1>
+      <p class="text-stone-500 text-sm mt-1">Đăng nhập tài khoản nhân viên hoặc quản trị</p>
+    </div>
+
+    <!-- Tabs: Password vs POS PIN -->
+    <div class="flex rounded-xl bg-stone-100 p-1 mb-6">
+      <button id="tabPassword" onclick="switchTab('password')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-stone-900 shadow-sm">
+        <i class="fa-solid fa-key mr-1.5 text-amber-600"></i>Mật khẩu
+      </button>
+      <button id="tabPin" onclick="switchTab('pin')" class="flex-1 py-2 text-xs font-bold rounded-lg transition-all text-stone-600 hover:text-stone-900">
+        <i class="fa-solid fa-mobile-screen mr-1.5 text-amber-600"></i>Mã PIN POS
+      </button>
+    </div>
+
+    <!-- Form 1: Username & Password -->
+    <form id="formPassword" onsubmit="handlePasswordLogin(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Tên đăng nhập</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-stone-400">
+            <i class="fa-solid fa-user text-sm"></i>
+          </span>
+          <input type="text" id="usernameInput" required value="cashier_test" placeholder="cashier_test hoặc admin"
+            class="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-sm text-stone-900 outline-none transition font-medium">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Mật khẩu</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-stone-400">
+            <i class="fa-solid fa-lock text-sm"></i>
+          </span>
+          <input type="password" id="passwordInput" required value="123456" placeholder="Nhập mật khẩu"
+            class="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-sm text-stone-900 outline-none transition font-medium">
+        </div>
+      </div>
+
+      <button type="submit" id="btnSubmitPassword"
+        class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-sm shadow-lg shadow-amber-600/25 transition active:scale-[0.99] flex items-center justify-center gap-2">
+        <span>Đăng Nhập</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <!-- Form 2: POS PIN -->
+    <form id="formPin" onsubmit="handlePinLogin(event)" class="space-y-4 hidden">
+      <div>
+        <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">Nhập mã PIN POS (4-6 số)</label>
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-stone-400">
+            <i class="fa-solid fa-shield-halved text-sm"></i>
+          </span>
+          <input type="password" id="pinInput" maxlength="6" value="1234" placeholder="••••"
+            class="w-full pl-10 pr-4 py-3 rounded-xl border border-stone-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 text-sm text-stone-900 outline-none transition tracking-widest text-center text-lg font-bold">
+        </div>
+      </div>
+
+      <!-- Quick Numpad -->
+      <div class="grid grid-cols-3 gap-2 pt-2">
+        <button type="button" onclick="pressPin('1')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">1</button>
+        <button type="button" onclick="pressPin('2')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">2</button>
+        <button type="button" onclick="pressPin('3')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">3</button>
+        <button type="button" onclick="pressPin('4')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">4</button>
+        <button type="button" onclick="pressPin('5')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">5</button>
+        <button type="button" onclick="pressPin('6')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">6</button>
+        <button type="button" onclick="pressPin('7')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">7</button>
+        <button type="button" onclick="pressPin('8')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">8</button>
+        <button type="button" onclick="pressPin('9')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">9</button>
+        <button type="button" onclick="clearPin()" class="py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-sm">Xóa</button>
+        <button type="button" onclick="pressPin('0')" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-base active:bg-stone-300">0</button>
+        <button type="button" onclick="backspacePin()" class="py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-sm"><i class="fa-solid fa-delete-left"></i></button>
+      </div>
+
+      <button type="submit" id="btnSubmitPin"
+        class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold text-sm shadow-lg shadow-amber-600/25 transition active:scale-[0.99] flex items-center justify-center gap-2">
+        <span>Xác Nhận PIN</span>
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </form>
+
+    <!-- Quick Credentials Helper -->
+    <div class="mt-8 pt-6 border-t border-stone-200 text-center">
+      <p class="text-xs text-stone-500 mb-2 font-medium">Tài khoản thử nghiệm nhanh:</p>
+      <div class="flex items-center justify-center gap-2">
+        <button onclick="fillDemo('cashier_test', '123456')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 transition">
+          Thu ngân (cashier_test)
+        </button>
+        <button onclick="fillDemo('admin', '123456')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-stone-100 text-stone-800 hover:bg-stone-200 transition">
+          Quản trị (admin)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      const tabPassword = document.getElementById('tabPassword');
+      const tabPin = document.getElementById('tabPin');
+      const formPassword = document.getElementById('formPassword');
+      const formPin = document.getElementById('formPin');
+
+      if (tab === 'password') {
+        tabPassword.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-stone-900 shadow-sm';
+        tabPin.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all text-stone-600 hover:text-stone-900';
+        formPassword.classList.remove('hidden');
+        formPin.classList.add('hidden');
+      } else {
+        tabPin.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all bg-white text-stone-900 shadow-sm';
+        tabPassword.className = 'flex-1 py-2 text-xs font-bold rounded-lg transition-all text-stone-600 hover:text-stone-900';
+        formPin.classList.remove('hidden');
+        formPassword.classList.add('hidden');
+      }
+    }
+
+    function pressPin(digit) {
+      const input = document.getElementById('pinInput');
+      if (input.value.length < 6) input.value += digit;
+    }
+    function clearPin() {
+      document.getElementById('pinInput').value = '';
+    }
+    function backspacePin() {
+      const input = document.getElementById('pinInput');
+      input.value = input.value.slice(0, -1);
+    }
+
+    function fillDemo(user, pass) {
+      switchTab('password');
+      document.getElementById('usernameInput').value = user;
+      document.getElementById('passwordInput').value = pass;
+    }
+
+    async function handlePasswordLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      const btn = document.getElementById('btnSubmitPassword');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang đăng nhập...';
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Đăng nhập không thành công');
+        }
+
+        const authData = data.data || data;
+        localStorage.setItem('auth_token', authData.accessToken);
+        localStorage.setItem('auth_user', JSON.stringify(authData.user));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Đăng nhập thành công!',
+          text: `Xin chào, ${authData.user.username} (${authData.user.roleName})`,
+          timer: 1200,
+          showConfirmButton: false
+        }).then(() => {
+          redirectAfterLogin(authData.user.roleName);
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi đăng nhập',
+          text: err.message
+        });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Đăng Nhập</span><i class="fa-solid fa-arrow-right"></i>';
+      }
+    }
+
+    async function handlePinLogin(e) {
+      e.preventDefault();
+      const pin = document.getElementById('pinInput').value.trim();
+      const btn = document.getElementById('btnSubmitPin');
+
+      if (!pin) {
+        Swal.fire({ icon: 'warning', title: 'Vui lòng nhập mã PIN' });
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang xác thực...';
+
+      try {
+        const res = await fetch('/api/v1/auth/login-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Mã PIN không đúng hoặc tài khoản bị khóa');
+        }
+
+        const authData = data.data || data;
+        localStorage.setItem('auth_token', authData.accessToken);
+        localStorage.setItem('auth_user', JSON.stringify(authData.user));
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Xác thực thành công!',
+          timer: 1000,
+          showConfirmButton: false
+        }).then(() => {
+          redirectAfterLogin(authData.user.roleName);
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Mã PIN sai',
+          text: err.message
+        });
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>Xác Nhận PIN</span><i class="fa-solid fa-arrow-right"></i>';
+      }
+    }
+
+    function redirectAfterLogin(role) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get('redirect');
+      if (redirect) {
+        window.location.href = redirect;
+        return;
+      }
+
+      if (role === 'ADMIN' || role === 'MANAGER') {
+        window.location.href = '/admin.html';
+      } else if (role === 'BARISTA') {
+        window.location.href = '/kds.html';
+      } else {
+        window.location.href = '/pos.html';
+      }
+    }
+  </script>
+</body>
+</html>
+

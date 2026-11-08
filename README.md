@@ -2,10 +2,22 @@
 
 > **Hệ thống POS bán hàng cảm ứng tại quầy, Màn hình pha chế Barista KDS (Real-time WebSockets), Cổng thanh toán VietQR SePay tự động và HQ Dashboard Quản trị chuỗi cà phê đa kênh.**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Railway-0B0D0E?logo=railway&logoColor=white)](https://cmu-se-100-production.up.railway.app/)
+[![Swagger API](https://img.shields.io/badge/Swagger-OpenAPI-85EA2D?logo=swagger&logoColor=black)](https://cmu-se-100-production.up.railway.app/api/docs)
 [![NestJS](https://img.shields.io/badge/NestJS-12.x-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-8.0-2D3748?logo=prisma&logoColor=white)](https://prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-316192?logo=postgresql&logoColor=white)](https://supabase.com/)
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/)
+
+---
+
+## 🌐 Đường Dẫn Truy Cập Trực Tiếp (Production Links)
+
+- **Trang Cổng Điều Hướng (Portal)**: [https://cmu-se-100-production.up.railway.app/](https://cmu-se-100-production.up.railway.app/)
+- **Màn hình POS Bán Hàng (Thu Ngân)**: [https://cmu-se-100-production.up.railway.app/pos.html](https://cmu-se-100-production.up.railway.app/pos.html)
+- **Màn hình KDS Pha Chế (Barista Realtime)**: [https://cmu-se-100-production.up.railway.app/kds.html](https://cmu-se-100-production.up.railway.app/kds.html)
+- **HQ Quản Trị Hệ Thống (Admin Dashboard)**: [https://cmu-se-100-production.up.railway.app/admin.html](https://cmu-se-100-production.up.railway.app/admin.html)
+- **Tài liệu Swagger API**: [https://cmu-se-100-production.up.railway.app/api/docs](https://cmu-se-100-production.up.railway.app/api/docs)
+- **Webhook SePay IPN**: `https://cmu-se-100-production.up.railway.app/api/v1/payments/sepay-webhook`
 
 ---
 

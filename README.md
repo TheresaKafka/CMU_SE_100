@@ -94,3 +94,4 @@ npm run start:prod
 ## 🛡️ Bản Quyền & Giấy Phép
 Dự án được xây dựng và phát triển cho môn học CMU-SE-100.
 Tuân thủ đầy đủ bộ quy tắc kiến trúc tại `AI_RULES.md`.
+

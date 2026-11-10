@@ -295,6 +295,37 @@
     </div>
   </div>
 
+  <!-- MODAL: Product Options Customization (Kích cỡ, Đá, Đường) -->
+  <div id="productOptionModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 animate-scaleUp text-left">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-100">
+        <div>
+          <h3 id="optionModalProdName" class="text-base font-extrabold text-stone-900">Tên Món</h3>
+          <p id="optionModalProdPrice" class="text-xs font-bold text-amber-600 mt-0.5">35.000đ</p>
+        </div>
+        <button onclick="closeOptionModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center text-sm font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Dynamic Options List -->
+      <div id="optionModalBody" class="py-4 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Footer & Confirm Button -->
+      <div class="pt-3 border-t border-stone-100 flex gap-2">
+        <button onclick="closeOptionModal()" class="py-3 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold transition">
+          Hủy
+        </button>
+        <button id="btnConfirmOptions" onclick="confirmAddToCartWithOptions()" class="flex-1 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-md shadow-amber-600/30 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-cart-plus"></i>
+          <span id="btnConfirmOptionsText">Thêm Vào Giỏ</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // App State
     let token = localStorage.getItem('auth_token');
@@ -696,12 +727,135 @@
       }
     }
 
-    // 4. Cart Operations
+    // 4. Cart & Product Customization Operations
+    let currentCustomizingProduct = null;
+    let selectedModifiers = {};
+
     function addToCart(productId) {
       const product = products.find(p => p.id === productId);
       if (!product) return;
 
-      const existing = cart.find(item => item.productId === productId);
+      if (!product.options || product.options.length === 0) {
+        quickAddToCart(product, []);
+        return;
+      }
+
+      openOptionModal(product);
+    }
+
+    function openOptionModal(product) {
+      currentCustomizingProduct = product;
+      selectedModifiers = {};
+
+      document.getElementById('optionModalProdName').textContent = product.name;
+      document.getElementById('optionModalProdPrice').textContent = `${Number(product.basePrice).toLocaleString()}đ`;
+
+      const body = document.getElementById('optionModalBody');
+      body.innerHTML = product.options.map(opt => {
+        // Pre-select default value: priority priceAdjustment == 0 or first
+        const defaultVal = opt.values.find(v => Number(v.priceAdjustment) === 0) || opt.values[0];
+        if (defaultVal) {
+          selectedModifiers[opt.id] = defaultVal;
+        }
+
+        const valuesHtml = opt.values.map(val => {
+          const isSelected = defaultVal && defaultVal.id === val.id;
+          const adj = Number(val.priceAdjustment);
+          const adjText = adj > 0 ? ` (+${adj.toLocaleString()}đ)` : '';
+
+          return `
+            <button type="button"
+              id="opt_btn_${val.id}"
+              onclick="selectOptionValue('${opt.id}', '${val.id}')"
+              class="opt-val-btn px-3 py-2 rounded-xl text-xs font-bold border transition ${isSelected ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-stone-50 text-stone-700 border-stone-200 hover:border-amber-300'}">
+              ${val.valueName}${adjText}
+            </button>
+          `;
+        }).join('');
+
+        return `
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <label class="text-xs font-bold text-stone-800">${opt.optionName}</label>
+              ${opt.isRequired ? '<span class="text-[10px] text-amber-600 font-bold bg-amber-50 px-1.5 py-0.5 rounded">Bắt buộc</span>' : ''}
+            </div>
+            <div class="flex flex-wrap gap-2" id="opt_group_${opt.id}">
+              ${valuesHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateOptionModalTotal();
+      document.getElementById('productOptionModal').classList.remove('hidden');
+    }
+
+    function selectOptionValue(optionId, valueId) {
+      if (!currentCustomizingProduct) return;
+      const opt = currentCustomizingProduct.options.find(o => o.id === optionId);
+      if (!opt) return;
+      const val = opt.values.find(v => v.id === valueId);
+      if (!val) return;
+
+      selectedModifiers[optionId] = val;
+
+      opt.values.forEach(v => {
+        const btn = document.getElementById(`opt_btn_${v.id}`);
+        if (btn) {
+          if (v.id === valueId) {
+            btn.className = 'opt-val-btn px-3 py-2 rounded-xl text-xs font-bold border transition bg-amber-600 text-white border-amber-600 shadow-sm';
+          } else {
+            btn.className = 'opt-val-btn px-3 py-2 rounded-xl text-xs font-bold border transition bg-stone-50 text-stone-700 border-stone-200 hover:border-amber-300';
+          }
+        }
+      });
+
+      updateOptionModalTotal();
+    }
+
+    function updateOptionModalTotal() {
+      if (!currentCustomizingProduct) return;
+      let total = Number(currentCustomizingProduct.basePrice);
+      Object.values(selectedModifiers).forEach(val => {
+        total += Number(val.priceAdjustment || 0);
+      });
+      document.getElementById('btnConfirmOptionsText').textContent = `Thêm Vào Giỏ • ${total.toLocaleString()}đ`;
+    }
+
+    function closeOptionModal() {
+      document.getElementById('productOptionModal').classList.add('hidden');
+      currentCustomizingProduct = null;
+      selectedModifiers = {};
+    }
+
+    function confirmAddToCartWithOptions() {
+      if (!currentCustomizingProduct) return;
+
+      const modifiers = Object.values(selectedModifiers).map(v => ({
+        optionValueId: v.id,
+        valueName: v.valueName,
+        priceAdjustment: Number(v.priceAdjustment)
+      }));
+
+      quickAddToCart(currentCustomizingProduct, modifiers);
+      closeOptionModal();
+    }
+
+    function quickAddToCart(product, modifiers = []) {
+      // Auto-populate required options if not supplied
+      if (product.options && product.options.length > 0 && modifiers.length === 0) {
+        modifiers = product.options.map(opt => {
+          const val = opt.values.find(v => Number(v.priceAdjustment) === 0) || opt.values[0];
+          return val ? { optionValueId: val.id, valueName: val.valueName, priceAdjustment: Number(val.priceAdjustment) } : null;
+        }).filter(Boolean);
+      }
+
+      const modTotal = modifiers.reduce((sum, m) => sum + (m.priceAdjustment || 0), 0);
+      const unitPrice = Number(product.basePrice) + modTotal;
+      const modifierText = modifiers.map(m => m.valueName).join(' • ');
+      const modKey = modifiers.map(m => m.optionValueId).sort().join(',');
+
+      const existing = cart.find(item => item.productId === product.id && item.modKey === modKey);
       if (existing) {
         existing.quantity += 1;
       } else {
@@ -709,8 +863,11 @@
           productId: product.id,
           name: product.name,
           basePrice: Number(product.basePrice),
+          unitPrice,
           quantity: 1,
-          modifiers: []
+          modifiers: modifiers.map(m => ({ optionValueId: m.optionValueId })),
+          modifierText,
+          modKey
         });
       }
       renderCart();
@@ -761,14 +918,16 @@
 
       let subtotal = 0;
       list.innerHTML = cart.map((item, idx) => {
-        const itemTotal = item.basePrice * item.quantity;
+        const itemPrice = item.unitPrice || item.basePrice;
+        const itemTotal = itemPrice * item.quantity;
         subtotal += itemTotal;
 
         return `
           <div class="bg-stone-50 rounded-2xl p-3 border border-stone-200/80 flex items-center justify-between gap-2 text-xs">
             <div class="flex-1">
               <h5 class="font-bold text-stone-800 line-clamp-1">${item.name}</h5>
-              <p class="text-amber-700 font-semibold text-[11px] mt-0.5">${item.basePrice.toLocaleString()}đ</p>
+              ${item.modifierText ? `<p class="text-[10px] text-amber-700 font-medium line-clamp-1 mt-0.5">${item.modifierText}</p>` : ''}
+              <p class="text-stone-400 font-semibold text-[11px] mt-0.5">${itemPrice.toLocaleString()}đ</p>
             </div>
             <!-- Qty Stepper -->
             <div class="flex items-center gap-1.5 bg-white border border-stone-200 rounded-xl p-1">
@@ -798,12 +957,30 @@
       }
 
       if (orderType === 'DINE_IN' && !selectedTable) {
-        throw new Error('Vui lòng chọn Bàn cho đơn dùng tại chỗ');
+        const result = await Swal.fire({
+          icon: 'question',
+          title: 'Chưa chọn Bàn phục vụ',
+          text: 'Đơn hàng này dùng tại bàn hay mang đi?',
+          showCancelButton: true,
+          confirmButtonColor: '#d97706',
+          cancelButtonColor: '#4b5563',
+          confirmButtonText: '<i class="fa-solid fa-chair mr-1"></i> Chọn Bàn ngay',
+          cancelButtonText: '<i class="fa-solid fa-bag-shopping mr-1"></i> Đổi sang Mang Đi'
+        });
+
+        if (result.isConfirmed) {
+          switchMainTab('tables');
+          return null;
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          setOrderType('TAKE_AWAY');
+        } else {
+          return null;
+        }
       }
 
       const payload = {
         shiftId: currentShift.id,
-        tableId: selectedTable ? selectedTable.id : undefined,
+        tableId: (orderType === 'DINE_IN' && selectedTable) ? selectedTable.id : undefined,
         orderType: orderType,
         paymentMethod: paymentMethod,
         items: cart.map(item => ({

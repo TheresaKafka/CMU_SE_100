@@ -108,6 +108,20 @@ export class OrdersService {
           const selectedForThisOption = option.values.filter((v) => chosenValueIds.has(v.id));
 
           if (option.isRequired && selectedForThisOption.length === 0) {
+            // Tự động gán tùy chọn mặc định (ưu tiên phụ thu 0đ hoặc lựa chọn đầu tiên) nếu client chưa chỉ định
+            const defaultValue =
+              option.values.find((v) => Number(v.priceAdjustment) === 0) ||
+              option.values[0];
+
+            if (defaultValue) {
+              chosenModifiers.push({
+                optionValueId: defaultValue.id,
+                valueName: defaultValue.valueName,
+                priceAdjustment: Number(defaultValue.priceAdjustment),
+              });
+              continue;
+            }
+
             throw new BadRequestException(
               `Nhóm tùy chọn "${option.optionName}" của món "${product.name}" là bắt buộc chọn`,
             );

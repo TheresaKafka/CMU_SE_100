@@ -69,8 +69,8 @@ async function bootstrap() {
     },
   });
 
-  const port = process.env['PORT'] ? parseInt(process.env['PORT'], 10) : 3000;
-  await app.listen(port);
+  const port = process.env['PORT'] ? parseInt(process.env['PORT'], 10) : 8080;
+  await app.listen(port, '0.0.0.0');
   logger.log(`Server is running at: http://localhost:${port}/api/v1`);
   logger.log(`Swagger OpenAPI Documentation: http://localhost:${port}/api/docs`);
 }

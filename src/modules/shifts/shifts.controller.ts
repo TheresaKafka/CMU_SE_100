@@ -46,7 +46,22 @@ export class ShiftsController {
   }
 
   @ApiOperation({
-    summary: 'Chốt ca và đối soát tiền mặt (DB Transaction: tính chênh lệch discrepancy)',
+    summary: 'Chốt ca làm việc hiện tại của thu ngân đang đăng nhập',
+  })
+  @ApiResponse({ status: 200, description: 'Chốt ca thành công kèm biên bản kiểm toán' })
+  @ApiResponse({ status: 404, description: 'Không có ca nào đang mở' })
+  @Roles(UserRole.CASHIER, UserRole.ADMIN, UserRole.MANAGER)
+  @HttpCode(HttpStatus.OK)
+  @Post('close')
+  async closeCurrentShift(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CloseShiftDto,
+  ) {
+    return this.shiftsService.closeCurrentShift(user, dto);
+  }
+
+  @ApiOperation({
+    summary: 'Chốt ca và đối soát tiền mặt theo ID ca (DB Transaction: tính chênh lệch discrepancy)',
   })
   @ApiResponse({ status: 200, description: 'Chốt ca thành công kèm biên bản kiểm toán' })
   @ApiResponse({ status: 403, description: 'Không có quyền chốt ca này' })

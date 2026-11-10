@@ -84,6 +84,18 @@ export class ShiftsService {
     };
   }
 
+  async closeCurrentShift(user: AuthenticatedUser, dto: CloseShiftDto) {
+    const shift = await this.prisma.orm.public.Shift
+      .where({ cashierId: user.id, status: 'OPEN' })
+      .first();
+
+    if (!shift) {
+      throw new NotFoundException('Bạn không có ca làm việc nào đang mở để đóng.');
+    }
+
+    return this.closeShift(shift.id, user, dto);
+  }
+
   async closeShift(shiftId: string, user: AuthenticatedUser, dto: CloseShiftDto) {
     return this.prisma.transaction(async (tx) => {
       const shift = await tx.orm.public.Shift

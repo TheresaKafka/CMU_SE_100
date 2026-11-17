@@ -413,6 +413,77 @@
     </div>
   </div>
 
+  <!-- MODAL: Add Area -->
+  <div id="areaModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-extrabold text-stone-900">Thêm Khu Vực Mới</h3>
+        <button onclick="closeAreaModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateArea(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Tên khu vực</label>
+          <input type="text" id="areaNameInput" required placeholder="VD: Tầng 2 - Ban công, Sân vườn..."
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Thứ tự hiển thị (tùy chọn)</label>
+          <input type="number" id="areaOrderInput" min="0" placeholder="0, 1, 2..."
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="w-full py-3 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs shadow-lg shadow-stone-900/20 transition">
+            Lưu Khu Vực
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Table -->
+  <div id="tableModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-extrabold text-stone-900">Thêm Bàn Mới</h3>
+        <button onclick="closeTableModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateTable(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Chọn Khu Vực</label>
+          <select id="tableAreaSelect" required class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+            <!-- Dynamic areas -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Số hiệu / Tên bàn</label>
+          <input type="text" id="tableNumberInput" required placeholder="VD: Bàn 06, VIP-01, B12..."
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-bold outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Sức chứa (số chỗ ngồi)</label>
+          <input type="number" id="tableCapacityInput" required min="1" max="50" value="4"
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-bold outline-none">
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition">
+            Lưu Bàn Mới
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     // State
     let token = localStorage.getItem('auth_token');
@@ -722,28 +793,200 @@
       }
     }
 
-    // 4. Render Tables
+    // 4. Render Tables & Area Management
     function renderTables() {
       const wrapper = document.getElementById('adminAreaList');
+      if (!areas || areas.length === 0) {
+        wrapper.innerHTML = `
+          <div class="bg-white rounded-3xl p-8 border border-stone-200 text-center shadow-sm">
+            <i class="fa-solid fa-chair text-4xl text-stone-300 mb-3"></i>
+            <p class="text-sm font-bold text-stone-700">Chưa có Khu Vực nào</p>
+            <p class="text-xs text-stone-400 mt-1 mb-4">Hãy tạo Khu Vực trước (Ví dụ: Tầng 1, Sân vườn, Tầng 2) để bắt đầu thêm bàn.</p>
+            <button onclick="openAreaModal()" class="px-4 py-2 rounded-xl bg-stone-900 text-white font-bold text-xs shadow-md">
+              <i class="fa-solid fa-plus mr-1"></i> Thêm Khu Vực Ngay
+            </button>
+          </div>
+        `;
+        return;
+      }
+
       wrapper.innerHTML = areas.map(area => {
-        const areaTables = tables.filter(t => t.areaId === area.id);
+        const areaTables = tables.filter(t => (t.area && t.area.id === area.id) || t.areaId === area.id);
         return `
           <div class="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm">
-            <h4 class="text-sm font-extrabold text-stone-800 mb-4 flex items-center gap-2">
-              <i class="fa-solid fa-layer-group text-indigo-600"></i>
-              <span>${area.name}</span>
-            </h4>
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-stone-100">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-layer-group text-indigo-600"></i>
+                <h4 class="text-sm font-extrabold text-stone-800">${area.name}</h4>
+                <span class="px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[10px] font-bold">
+                  ${areaTables.length} bàn
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openTableModal('${area.id}')" class="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1 transition">
+                  <i class="fa-solid fa-plus text-[10px]"></i> Thêm Bàn
+                </button>
+                <button onclick="handleDeleteArea('${area.id}', '${area.name}')" class="px-2.5 py-1.5 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 text-xs transition" title="Xóa khu vực này">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
             <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              ${areaTables.map(t => `
-                <div class="p-3 rounded-2xl border text-center ${t.status === 'OCCUPIED' ? 'bg-rose-50 border-rose-300 text-rose-800' : 'bg-stone-50 border-stone-200 text-stone-800'}">
-                  <p class="font-extrabold text-base">Bàn ${t.tableNumber}</p>
-                  <p class="text-[10px] text-stone-500 mt-0.5">${t.capacity} chỗ • ${t.status}</p>
+              ${areaTables.length === 0 ? `
+                <div class="col-span-full py-6 text-center border-2 border-dashed border-stone-200 rounded-2xl">
+                  <p class="text-xs text-stone-400 italic mb-2">Chưa có bàn nào trong khu vực này</p>
+                  <button onclick="openTableModal('${area.id}')" class="text-xs font-bold text-indigo-600 hover:underline">
+                    + Thêm bàn đầu tiên
+                  </button>
+                </div>
+              ` : areaTables.map(t => `
+                <div class="relative group p-3 rounded-2xl border text-center transition hover:shadow-md ${t.status === 'OCCUPIED' ? 'bg-rose-50 border-rose-300 text-rose-800' : 'bg-stone-50 border-stone-200 text-stone-800'}">
+                  <button onclick="handleDeleteTable('${t.id}', '${t.tableNumber}')" class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-white/90 hover:bg-rose-600 hover:text-white text-stone-400 shadow-sm opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[10px]" title="Xóa bàn ${t.tableNumber}">
+                    <i class="fa-solid fa-trash"></i>
+                  </button>
+                  <p class="font-extrabold text-base">${t.tableNumber}</p>
+                  <p class="text-[10px] text-stone-500 mt-0.5">${t.capacity} chỗ • ${t.status === 'OCCUPIED' ? 'Có khách' : 'Trống'}</p>
                 </div>
               `).join('')}
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    // Area & Table Modals & Handlers
+    function openAreaModal() {
+      document.getElementById('areaNameInput').value = '';
+      document.getElementById('areaOrderInput').value = '';
+      document.getElementById('areaModal').classList.remove('hidden');
+    }
+
+    function closeAreaModal() {
+      document.getElementById('areaModal').classList.add('hidden');
+    }
+
+    async function handleCreateArea(e) {
+      e.preventDefault();
+      const name = document.getElementById('areaNameInput').value.trim();
+      const orderVal = document.getElementById('areaOrderInput').value;
+      const displayOrder = orderVal !== '' ? parseInt(orderVal, 10) : 0;
+
+      try {
+        const res = await fetch('/api/v1/areas', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ name, displayOrder })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Không thể tạo khu vực');
+
+        Swal.fire({ icon: 'success', title: 'Tạo khu vực thành công', timer: 1200, showConfirmButton: false });
+        closeAreaModal();
+        await loadAllData();
+        renderTables();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    async function handleDeleteArea(areaId, areaName) {
+      const confirm = await Swal.fire({
+        title: `Xóa Khu Vực "${areaName}"?`,
+        text: 'Lưu ý: Chỉ có thể xóa khu vực khi khu vực không còn bàn nào!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Xóa ngay',
+        cancelButtonText: 'Hủy'
+      });
+      if (!confirm.isConfirmed) return;
+
+      try {
+        const res = await fetch(`/api/v1/areas/${areaId}`, {
+          method: 'DELETE',
+          headers: authHeaders()
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Không thể xóa khu vực');
+
+        Swal.fire({ icon: 'success', title: 'Đã xóa khu vực', timer: 1200, showConfirmButton: false });
+        await loadAllData();
+        renderTables();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    function openTableModal(preselectedAreaId = null) {
+      const select = document.getElementById('tableAreaSelect');
+      if (!areas || areas.length === 0) {
+        Swal.fire({ icon: 'warning', title: 'Chưa có khu vực', text: 'Vui lòng thêm ít nhất một Khu Vực trước khi thêm Bàn!' });
+        return;
+      }
+
+      select.innerHTML = areas.map(a => `<option value="${a.id}" ${preselectedAreaId === a.id ? 'selected' : ''}>${a.name}</option>`).join('');
+      document.getElementById('tableNumberInput').value = '';
+      document.getElementById('tableCapacityInput').value = '4';
+      document.getElementById('tableModal').classList.remove('hidden');
+    }
+
+    function closeTableModal() {
+      document.getElementById('tableModal').classList.add('hidden');
+    }
+
+    async function handleCreateTable(e) {
+      e.preventDefault();
+      const areaId = document.getElementById('tableAreaSelect').value;
+      const tableNumber = document.getElementById('tableNumberInput').value.trim();
+      const capacity = parseInt(document.getElementById('tableCapacityInput').value, 10) || 4;
+
+      try {
+        const res = await fetch('/api/v1/tables', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ areaId, tableNumber, capacity })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Không thể tạo bàn mới');
+
+        Swal.fire({ icon: 'success', title: 'Thêm bàn mới thành công', timer: 1200, showConfirmButton: false });
+        closeTableModal();
+        await loadAllData();
+        renderTables();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
+    }
+
+    async function handleDeleteTable(tableId, tableNumber) {
+      const confirm = await Swal.fire({
+        title: `Xóa Bàn "${tableNumber}"?`,
+        text: 'Hành động này không thể hoàn tác.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Xóa bàn',
+        cancelButtonText: 'Hủy'
+      });
+      if (!confirm.isConfirmed) return;
+
+      try {
+        const res = await fetch(`/api/v1/tables/${tableId}`, {
+          method: 'DELETE',
+          headers: authHeaders()
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Không thể xóa bàn');
+
+        Swal.fire({ icon: 'success', title: 'Đã xóa bàn thành công', timer: 1200, showConfirmButton: false });
+        await loadAllData();
+        renderTables();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
     }
 
     // 5. Render Orders History

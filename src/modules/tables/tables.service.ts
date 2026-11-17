@@ -30,6 +30,7 @@ export class TablesService {
       tableNumber: t.tableNumber,
       capacity: t.capacity,
       status: t.status,
+      areaId: t.areaId,
       area: {
         id: t.area.id,
         name: t.area.name,

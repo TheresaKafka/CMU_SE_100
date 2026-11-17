@@ -621,7 +621,7 @@
       let occupiedCount = 0;
 
       wrapper.innerHTML = areas.map(area => {
-        const areaTables = tables.filter(t => t.areaId === area.id);
+        const areaTables = tables.filter(t => (t.area && t.area.id === area.id) || t.areaId === area.id);
         const tablesHtml = areaTables.map(t => {
           if (t.status === 'OCCUPIED') occupiedCount++;
           const isSelected = selectedTable && selectedTable.id === t.id;

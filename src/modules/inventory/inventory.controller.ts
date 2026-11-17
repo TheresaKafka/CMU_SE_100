@@ -29,7 +29,7 @@ export class InventoryController {
 
   @ApiOperation({ summary: 'Lấy danh sách nguyên vật liệu và trạng thái tồn kho (INV-01)' })
   @ApiResponse({ status: 200, description: 'Danh sách nguyên vật liệu' })
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.BARISTA)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.BARISTA, UserRole.CASHIER)
   @Get('ingredients')
   async getIngredients() {
     return this.inventoryService.getIngredients();
@@ -56,7 +56,7 @@ export class InventoryController {
 
   @ApiOperation({ summary: 'Cảnh báo tồn kho an toàn (INV-04 Safety Stock Alerts)' })
   @ApiResponse({ status: 200, description: 'Danh sách các nguyên liệu dưới ngưỡng an toàn' })
-  @Roles(UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER)
   @Get('alerts')
   async getSafetyAlerts() {
     return this.inventoryService.getSafetyAlerts();
@@ -75,7 +75,7 @@ export class InventoryController {
 
   @ApiOperation({ summary: 'Xem công thức định mức BOM của một món' })
   @ApiResponse({ status: 200, description: 'Công thức món' })
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.BARISTA)
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.BARISTA, UserRole.CASHIER)
   @Get('recipes/:productId')
   async getProductRecipe(@Param('productId') productId: string) {
     return this.inventoryService.getProductRecipe(productId);

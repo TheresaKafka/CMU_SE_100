@@ -46,6 +46,13 @@ export class AuthController {
     return this.authService.posLogin(dto);
   }
 
+  @ApiOperation({ summary: 'Đăng nhập POS bằng mã PIN (Alias cho pos-login)' })
+  @HttpCode(HttpStatus.OK)
+  @Post('login-pin')
+  async loginPin(@Body() dto: PosLoginDto) {
+    return this.authService.posLogin(dto);
+  }
+
   @ApiOperation({ summary: 'Lấy thông tin tài khoản đang đăng nhập' })
   @ApiBearerAuth('JWT-auth')
   @ApiResponse({ status: 200, description: 'Lấy thông tin thành công' })

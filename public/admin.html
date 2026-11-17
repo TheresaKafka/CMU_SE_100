@@ -413,6 +413,58 @@
     </div>
   </div>
 
+  <!-- MODAL: Add Ingredient -->
+  <div id="ingredientModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-extrabold text-stone-900">Thêm Nguyên Vật Liệu Mới</h3>
+        <button onclick="closeIngredientModal()" class="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 flex items-center justify-center font-bold">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateIngredient(event)" class="space-y-4 text-xs">
+        <div>
+          <label class="block font-bold text-stone-700 mb-1">Tên nguyên vật liệu</label>
+          <input type="text" id="ingNameInput" required placeholder="VD: Sữa tươi Barista, Hạt Arabica..."
+            class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-stone-700 mb-1">Đơn vị tính</label>
+            <input type="text" id="ingUnitInput" required placeholder="g, ml, cái, hộp..."
+              class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-stone-700 mb-1">Tồn kho ban đầu</label>
+            <input type="number" id="ingStockInput" required min="0" step="0.1" value="1000"
+              class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-bold text-sm outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-stone-700 mb-1">Ngưỡng an toàn tối thiểu</label>
+            <input type="number" id="ingSafetyInput" min="0" step="0.1" value="200"
+              class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-stone-700 mb-1">Giá vốn (Cost VNĐ)</label>
+            <input type="number" id="ingCostInput" min="0" step="100" value="0"
+              class="w-full px-4 py-2.5 rounded-xl border border-stone-300 focus:border-indigo-500 font-medium outline-none">
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition">
+            Lưu Nguyên Liệu
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: Add Area -->
   <div id="areaModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-200 animate-scaleUp">
@@ -529,23 +581,23 @@
       try {
         const [resAna, resProd, resCat, resIng, resArea, resTab, resOrd] = await Promise.all([
           fetch('/api/v1/orders/analytics/summary', { headers: authHeaders() }).catch(() => null),
-          fetch('/api/v1/products', { headers: authHeaders() }),
-          fetch('/api/v1/categories', { headers: authHeaders() }),
-          fetch('/api/v1/inventory/ingredients', { headers: authHeaders() }),
-          fetch('/api/v1/areas', { headers: authHeaders() }),
-          fetch('/api/v1/tables', { headers: authHeaders() }),
-          fetch('/api/v1/orders?limit=50', { headers: authHeaders() })
+          fetch('/api/v1/products', { headers: authHeaders() }).catch(() => null),
+          fetch('/api/v1/categories', { headers: authHeaders() }).catch(() => null),
+          fetch('/api/v1/inventory/ingredients', { headers: authHeaders() }).catch(() => null),
+          fetch('/api/v1/areas', { headers: authHeaders() }).catch(() => null),
+          fetch('/api/v1/tables', { headers: authHeaders() }).catch(() => null),
+          fetch('/api/v1/orders?limit=50', { headers: authHeaders() }).catch(() => null)
         ]);
 
         if (resAna && resAna.ok) {
           analyticsData = (await resAna.json()).data;
         }
-        products = (await resProd.json()).data || [];
-        categories = (await resCat.json()).data || [];
-        ingredients = (await resIng.json()).data || [];
-        areas = (await resArea.json()).data || [];
-        tables = (await resTab.json()).data || [];
-        orders = (await resOrd.json()).data || [];
+        if (resProd && resProd.ok) products = (await resProd.json()).data || [];
+        if (resCat && resCat.ok) categories = (await resCat.json()).data || [];
+        if (resIng && resIng.ok) ingredients = (await resIng.json()).data || [];
+        if (resArea && resArea.ok) areas = (await resArea.json()).data || [];
+        if (resTab && resTab.ok) tables = (await resTab.json()).data || [];
+        if (resOrd && resOrd.ok) orders = (await resOrd.json()).data || [];
 
         // Check safety alerts
         const safetyAlerts = ingredients.filter(i => i.isSafetyAlert).length;
@@ -735,9 +787,14 @@
     // 3. Render Inventory
     function renderInventory() {
       const tbody = document.getElementById('inventoryTableBody');
+      if (!ingredients || ingredients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-stone-400 font-medium">Chưa có nguyên vật liệu nào trong kho. Hãy bấm <b>"Thêm Nguyên Liệu"</b> để tạo mới.</td></tr>';
+        return;
+      }
+
       tbody.innerHTML = ingredients.map(ing => {
-        const current = Number(ing.currentStock);
-        const safety = Number(ing.safetyStock);
+        const current = Number(ing.currentStock || 0);
+        const safety = Number(ing.safetyStock || ing.minimumStock || 0);
         const isAlert = ing.isSafetyAlert;
 
         return `
@@ -746,7 +803,7 @@
             <td class="p-4 font-semibold text-stone-600">${ing.unit}</td>
             <td class="p-4 font-extrabold ${isAlert ? 'text-rose-600' : 'text-stone-900'}">${current.toLocaleString()}</td>
             <td class="p-4 text-stone-500">${safety.toLocaleString()}</td>
-            <td class="p-4 text-stone-700">${Number(ing.costPrice).toLocaleString()}đ</td>
+            <td class="p-4 text-stone-700">${Number(ing.costPrice || 0).toLocaleString()}đ</td>
             <td class="p-4">
               ${isAlert ?
                 '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Sắp hết hàng</span>' :
@@ -756,6 +813,40 @@
           </tr>
         `;
       }).join('');
+    }
+
+    function openIngredientModal() {
+      document.getElementById('ingredientModal').classList.remove('hidden');
+    }
+
+    function closeIngredientModal() {
+      document.getElementById('ingredientModal').classList.add('hidden');
+    }
+
+    async function handleCreateIngredient(e) {
+      e.preventDefault();
+      const name = document.getElementById('ingNameInput').value.trim();
+      const unit = document.getElementById('ingUnitInput').value.trim();
+      const currentStock = Number(document.getElementById('ingStockInput').value);
+      const safetyStock = Number(document.getElementById('ingSafetyInput').value);
+      const costPrice = Number(document.getElementById('ingCostInput').value);
+
+      try {
+        const res = await fetch('/api/v1/inventory/ingredients', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ name, unit, currentStock, safetyStock, costPrice })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Không thể tạo nguyên liệu');
+
+        closeIngredientModal();
+        Swal.fire({ icon: 'success', title: 'Tạo nguyên liệu thành công!', timer: 1200, showConfirmButton: false });
+        await loadAllData();
+        renderInventory();
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: err.message });
+      }
     }
 
     function openAdjustModal() {

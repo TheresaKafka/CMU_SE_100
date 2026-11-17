@@ -178,15 +178,16 @@
         const authData = data.data || data;
         localStorage.setItem('auth_token', authData.accessToken);
         localStorage.setItem('auth_user', JSON.stringify(authData.user));
+        const userRole = authData.user.role || authData.user.roleName || 'CASHIER';
 
         Swal.fire({
           icon: 'success',
           title: 'Đăng nhập thành công!',
-          text: `Xin chào, ${authData.user.username} (${authData.user.roleName})`,
+          text: `Xin chào, ${authData.user.username} (${userRole})`,
           timer: 1200,
           showConfirmButton: false
         }).then(() => {
-          redirectAfterLogin(authData.user.roleName);
+          redirectAfterLogin(userRole);
         });
       } catch (err) {
         Swal.fire({
@@ -214,10 +215,10 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang xác thực...';
 
       try {
-        const res = await fetch('/api/v1/auth/login-pin', {
+        const res = await fetch('/api/v1/auth/pos-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin })
+          body: JSON.stringify({ posPin: pin, pin: pin })
         });
         const data = await res.json();
 
@@ -228,6 +229,7 @@
         const authData = data.data || data;
         localStorage.setItem('auth_token', authData.accessToken);
         localStorage.setItem('auth_user', JSON.stringify(authData.user));
+        const userRole = authData.user.role || authData.user.roleName || 'CASHIER';
 
         Swal.fire({
           icon: 'success',
@@ -235,7 +237,7 @@
           timer: 1000,
           showConfirmButton: false
         }).then(() => {
-          redirectAfterLogin(authData.user.roleName);
+          redirectAfterLogin(userRole);
         });
       } catch (err) {
         Swal.fire({

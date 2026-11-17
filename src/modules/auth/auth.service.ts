@@ -102,14 +102,20 @@ export class AuthService {
         id: user.id,
         username: user.username,
         role: user.role.name,
+        roleName: user.role.name,
       },
       accessToken: token,
     };
   }
 
   async posLogin(dto: PosLoginDto) {
+    const pin = (dto.posPin || dto.pin)?.trim();
+    if (!pin) {
+      throw new UnauthorizedException('Mã PIN POS không được để trống');
+    }
+
     const user = await this.prisma.orm.public.User
-      .where({ posPin: dto.posPin })
+      .where({ posPin: pin })
       .include('role')
       .first();
 
@@ -129,6 +135,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         role: user.role.name,
+        roleName: user.role.name,
       },
       accessToken: token,
     };

@@ -531,10 +531,10 @@
 
     // Init Application
     async function init() {
-      await loadShift();
-      await loadCategories();
-      await loadProducts();
-      await loadAreasAndTables();
+      try { await loadShift(); } catch (e) { console.error('Shift init error:', e); }
+      try { await loadCategories(); } catch (e) { console.error('Categories init error:', e); }
+      try { await loadProducts(); } catch (e) { console.error('Products init error:', e); }
+      try { await loadAreasAndTables(); } catch (e) { console.error('Tables init error:', e); }
       initKdsSocket();
     }
 
@@ -583,6 +583,14 @@
         }
       } catch (err) {
         console.error('Lỗi tải ca:', err);
+        currentShift = null;
+        const badge = document.getElementById('shiftBadge');
+        const btnText = document.getElementById('shiftBtnText');
+        if (badge) {
+          badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 bg-rose-100 text-rose-800';
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Chưa Mở Ca</span>`;
+        }
+        if (btnText) btnText.textContent = 'Mở Ca Mới';
       }
     }
 
@@ -1080,7 +1088,6 @@
       document.getElementById('selectedTableLabel').textContent = `Bàn ${table.tableNumber}`;
       renderTables();
       switchMainTab('menu');
-    }
     }
 
     function setOrderType(type) {

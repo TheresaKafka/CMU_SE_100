@@ -198,13 +198,7 @@
 
       <!-- Cart Item List -->
       <div class="flex-1 p-4 overflow-y-auto space-y-3" id="cartItemList">
-        <div id="cartEmptyState" class="h-full flex flex-col items-center justify-center text-stone-400 py-12">
-          <div class="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-300 text-2xl mb-3">
-            <i class="fa-solid fa-cart-shopping"></i>
-          </div>
-          <p class="text-sm font-semibold text-stone-500">Giỏ hàng đang trống</p>
-          <p class="text-xs text-stone-400 mt-1">Chạm vào sản phẩm trên thực đơn để thêm món</p>
-        </div>
+        <!-- Empty state injected by renderCart() -->
       </div>
 
       <!-- Billing Summary & Action Buttons -->
@@ -939,6 +933,14 @@
             <i class="fa-solid fa-arrow-right text-xs"></i>
           </button>
 
+          <button onclick="openTransferModal('${table.id}')" class="w-full py-3 px-4 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 font-bold transition flex items-center justify-between">
+            <span class="flex items-center gap-2.5">
+              <i class="fa-solid fa-arrows-split-up-and-left text-sm text-sky-600"></i>
+              <span>Chuyển / Ghép bàn sang bàn khác</span>
+            </span>
+            <i class="fa-solid fa-arrow-right-arrow-left text-xs text-sky-500"></i>
+          </button>
+
           <button onclick="setTableReservation('${table.id}', 'EMPTY')" class="w-full py-3 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold transition flex items-center justify-between">
             <span class="flex items-center gap-2.5">
               <i class="fa-solid fa-calendar-xmark text-sm text-rose-600"></i>
@@ -1295,9 +1297,17 @@
       renderCart();
     }
 
+    // Keep a reference to emptyState HTML so we can restore after innerHTML clear
+    const _cartEmptyStateHtml = `<div id="cartEmptyState" class="h-full flex flex-col items-center justify-center text-stone-400 py-12">
+          <div class="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center text-stone-300 text-2xl mb-3">
+            <i class="fa-solid fa-cart-shopping"></i>
+          </div>
+          <p class="text-sm font-semibold text-stone-500">Giỏ hàng đang trống</p>
+          <p class="text-xs text-stone-400 mt-1">Chạm vào sản phẩm trên thực đơn để thêm món</p>
+        </div>`;
+
     function renderCart() {
       const list = document.getElementById('cartItemList');
-      const emptyState = document.getElementById('cartEmptyState');
       const badge = document.getElementById('cartCountBadge');
       const btnCash = document.getElementById('btnPayCash');
       const btnQr = document.getElementById('btnPayQr');
@@ -1307,9 +1317,7 @@
       badge.textContent = `${totalItems} món`;
 
       if (cart.length === 0) {
-        list.innerHTML = '';
-        list.appendChild(emptyState);
-        emptyState.classList.remove('hidden');
+        list.innerHTML = _cartEmptyStateHtml;
         document.getElementById('lblSubtotal').textContent = '0đ';
         document.getElementById('lblTotal').textContent = '0đ';
         btnCash.disabled = true;
@@ -1318,7 +1326,9 @@
         return;
       }
 
-      emptyState.classList.add('hidden');
+      // Hide empty state if present in DOM
+      const emptyState = document.getElementById('cartEmptyState');
+      if (emptyState) emptyState.classList.add('hidden');
 
       let subtotal = 0;
       list.innerHTML = cart.map((item, idx) => {

@@ -40,10 +40,20 @@
       </div>
     </div>
 
-    <!-- Station Filter Tabs -->
-    <div class="flex rounded-xl bg-stone-800/80 p-1 border border-stone-700/50">
+    <!-- Main View Tabs (Active / History) -->
+    <div class="flex rounded-xl bg-stone-800/80 p-1 border border-stone-700/50 mr-2">
+      <button onclick="switchView('active')" id="tabViewActive" class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-fire-burner"></i> Đang Chế Biến (<span id="countActive">0</span>)
+      </button>
+      <button onclick="switchView('history')" id="tabViewHistory" class="px-4 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white flex items-center gap-1.5">
+        <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i> Lịch Sử Hoàn Thành (<span id="countHistory">0</span>)
+      </button>
+    </div>
+
+    <!-- Station Filter Tabs (only shown in active view) -->
+    <div id="stationTabs" class="flex rounded-xl bg-stone-800/80 p-1 border border-stone-700/50">
       <button onclick="filterStation('ALL')" id="tabStationAll" class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm">
-        Tất Cả Món (<span id="countAll">0</span>)
+        Tất Cả (<span id="countAll">0</span>)
       </button>
       <button onclick="filterStation('HOT_BAR')" id="tabStationHot" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
         <i class="fa-solid fa-mug-hot mr-1 text-amber-500"></i>Hot Bar (<span id="countHot">0</span>)
@@ -77,26 +87,63 @@
 
   <!-- KDS Order Kanban Grid -->
   <main class="flex-1 p-6 overflow-y-auto">
-    <!-- Empty State -->
-    <div id="kdsEmptyState" class="h-full flex flex-col items-center justify-center text-stone-600 py-20">
-      <div class="w-24 h-24 rounded-3xl bg-stone-900 border border-stone-800 flex items-center justify-center text-4xl text-stone-700 mb-4 shadow-inner">
-        <i class="fa-solid fa-circle-check"></i>
+    <!-- Active Orders View -->
+    <div id="viewActive">
+      <!-- Empty State -->
+      <div id="kdsEmptyState" class="h-full flex flex-col items-center justify-center text-stone-600 py-20">
+        <div class="w-24 h-24 rounded-3xl bg-stone-900 border border-stone-800 flex items-center justify-center text-4xl text-stone-700 mb-4 shadow-inner">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h3 class="text-xl font-bold text-stone-400">Quầy Bar / Bếp Đã Sạch Đơn</h3>
+        <p class="text-xs text-stone-600 mt-1 max-w-sm text-center">Đang chờ đơn hàng mới từ thu ngân POS... Đơn sẽ tự động xuất hiện real-time tại đây kèm âm báo chuông.</p>
       </div>
-      <h3 class="text-xl font-bold text-stone-400">Quầy Bar / Bếp Đã Sạch Đơn</h3>
-      <p class="text-xs text-stone-600 mt-1 max-w-sm text-center">Đang chờ đơn hàng mới từ thu ngân POS... Đơn sẽ tự động xuất hiện real-time tại đây kèm âm báo chuông.</p>
+
+      <!-- Active Orders Grid -->
+      <div id="kdsOrderGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+        <!-- Dynamic Order Cards -->
+      </div>
     </div>
 
-    <!-- Active Orders Grid -->
-    <div id="kdsOrderGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
-      <!-- Dynamic Order Cards -->
+    <!-- History View (Completed Orders) -->
+    <div id="viewHistory" class="hidden">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-sm font-extrabold text-stone-300 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i>
+          Lịch Sử Đơn Đã Hoàn Thành Hôm Nay
+        </h2>
+        <button onclick="loadHistory()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate-right text-emerald-400"></i> Làm mới
+        </button>
+      </div>
+
+      <!-- History Empty State -->
+      <div id="historyEmptyState" class="hidden flex flex-col items-center justify-center text-stone-600 py-20">
+        <div class="w-24 h-24 rounded-3xl bg-stone-900 border border-stone-800 flex items-center justify-center text-4xl text-stone-700 mb-4">
+          <i class="fa-solid fa-box-open"></i>
+        </div>
+        <h3 class="text-xl font-bold text-stone-400">Chưa có đơn hoàn thành</h3>
+        <p class="text-xs text-stone-600 mt-1">Các đơn barista bấm "Đã Hoàn Thành" sẽ hiện ở đây.</p>
+      </div>
+
+      <!-- History Loading -->
+      <div id="historyLoading" class="flex items-center justify-center py-20 text-stone-500 text-sm gap-2">
+        <i class="fa-solid fa-spinner fa-spin text-emerald-500"></i> Đang tải lịch sử...
+      </div>
+
+      <!-- History Grid -->
+      <div id="kdsHistoryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+        <!-- Dynamic History Cards -->
+      </div>
     </div>
   </main>
 
   <script>
     // State
     let socket = null;
-    let orders = [];
+    let orders = [];          // Active orders (PENDING, PAID, PROCESSING)
+    let historyOrders = [];   // Completed orders
     let currentStation = 'ALL';
+    let currentView = 'active'; // 'active' | 'history'
     let audioCtx = null;
 
     // Web Audio API Beep Synth (Ting Ting Bell)
@@ -144,6 +191,135 @@
       setInterval(updateTimers, 1000);
     }
 
+    // ── View switching (Active / History) ──────────────────────────────
+    function switchView(view) {
+      currentView = view;
+      const isHistory = view === 'history';
+
+      document.getElementById('viewActive').classList.toggle('hidden', isHistory);
+      document.getElementById('viewHistory').classList.toggle('hidden', !isHistory);
+      document.getElementById('stationTabs').classList.toggle('hidden', isHistory);
+
+      const activeBtn = document.getElementById('tabViewActive');
+      const historyBtn = document.getElementById('tabViewHistory');
+      activeBtn.className = `px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${!isHistory ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-400 hover:text-white'}`;
+      historyBtn.className = `px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${isHistory ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-400 hover:text-white'}`;
+
+      if (isHistory) loadHistory();
+    }
+
+    // ── Load completed orders from API ─────────────────────────────────
+    async function loadHistory() {
+      document.getElementById('historyLoading').classList.remove('hidden');
+      document.getElementById('historyEmptyState').classList.add('hidden');
+      document.getElementById('kdsHistoryGrid').innerHTML = '';
+
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const res = await fetch('/api/v1/orders?status=COMPLETED&limit=100', { headers });
+        const json = await res.json();
+        const data = json.data || json || [];
+
+        historyOrders = data.map(o => ({
+          orderId: o.id,
+          orderType: o.orderType,
+          tableNumber: o.tableNumber,
+          status: o.status,
+          createdAt: o.createdAt,
+          completedAt: o.updatedAt || o.createdAt,
+          items: (o.items || []).map(item => ({
+            productName: item.product ? item.product.name : (item.productName || 'Món'),
+            quantity: item.quantity,
+            modifiers: (item.modifiers || []).map(m => ({
+              name: m.optionValue ? m.optionValue.valueName : (m.name || '')
+            })),
+            station: inferStation(item.product ? item.product.name : (item.productName || ''))
+          }))
+        }));
+
+        document.getElementById('countHistory').textContent = historyOrders.length;
+        renderHistory();
+      } catch (err) {
+        console.error('Lỗi tải lịch sử:', err);
+      } finally {
+        document.getElementById('historyLoading').classList.add('hidden');
+      }
+    }
+
+    // ── Render history grid ────────────────────────────────────────────
+    function renderHistory() {
+      const grid = document.getElementById('kdsHistoryGrid');
+      const empty = document.getElementById('historyEmptyState');
+
+      if (historyOrders.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = historyOrders.map(order => {
+        const completedTime = new Date(order.completedAt).toLocaleTimeString('vi-VN', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+        const createdTime = new Date(order.createdAt).toLocaleTimeString('vi-VN', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        return `
+          <div class="bg-stone-900/70 rounded-3xl border border-emerald-900/50 shadow-xl flex flex-col overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
+            <div class="p-4 border-b border-stone-800 flex items-center justify-between">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-base font-extrabold text-stone-300">#${order.orderId.slice(0, 8).toUpperCase()}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'}">
+                    ${order.orderType === 'DINE_IN' ? (order.tableNumber ? `Bàn ${order.tableNumber}` : 'Tại bàn') : 'Mang đi'}
+                  </span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900/60 text-emerald-400 border border-emerald-700/40">
+                    <i class="fa-solid fa-check mr-0.5"></i>Hoàn thành
+                  </span>
+                </div>
+                <p class="text-[10px] font-medium text-stone-500 mt-0.5">Tạo: ${createdTime} · Xong: ${completedTime}</p>
+              </div>
+            </div>
+
+            <div class="p-4 flex-1 space-y-2 overflow-y-auto max-h-60 no-scrollbar">
+              ${order.items.map(item => `
+                <div class="bg-stone-950/60 rounded-xl p-2.5 border border-stone-800/60 flex items-center gap-2.5">
+                  <span class="w-6 h-6 rounded-lg bg-emerald-600/20 text-emerald-500 border border-emerald-600/30 flex items-center justify-center font-extrabold text-xs shrink-0">
+                    ${item.quantity}
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <span class="font-bold text-sm text-stone-300 line-clamp-1">${item.productName}</span>
+                    ${item.modifiers && item.modifiers.length > 0 ? `
+                      <div class="flex flex-wrap gap-1 mt-1">
+                        ${item.modifiers.map(m => m.name ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-stone-800 text-amber-400 border border-stone-700">• ${m.name}</span>` : '').join('')}
+                      </div>` : ''}
+                  </div>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${getStationBadge(item.station)} shrink-0">${getStationName(item.station)}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="p-3 border-t border-stone-800 bg-emerald-950/30 flex items-center justify-center gap-2 text-xs font-bold text-emerald-500">
+              <i class="fa-solid fa-circle-check"></i> Đã Hoàn Thành
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Helper: infer station from product name ────────────────────────
+    function inferStation(name) {
+      const n = (name || '').toLowerCase();
+      if (n.includes('bánh') || n.includes('cake') || n.includes('croissant')) return 'WARMING_STATION';
+      if (n.includes('đá') || n.includes('trà') || n.includes('cold')) return 'COLD_BAR';
+      if (n.includes('nóng') || n.includes('hot') || n.includes('espresso')) return 'HOT_BAR';
+      return 'BAR';
+    }
+
     // Connect WebSocket /kds
     function connectSocket() {
       socket = io('/kds');
@@ -185,12 +361,21 @@
       // Lắng nghe sự kiện cập nhật trạng thái chế biến
       socket.on('order.status-updated', (payload) => {
         if (payload.status === 'COMPLETED') {
+          // Move completed order from active → history
+          const completedOrder = orders.find(o => o.orderId === payload.orderId);
           orders = orders.filter(o => o.orderId !== payload.orderId);
+
+          if (completedOrder) {
+            completedOrder.status = 'COMPLETED';
+            completedOrder.completedAt = new Date().toISOString();
+            historyOrders.unshift(completedOrder);
+            document.getElementById('countHistory').textContent = historyOrders.length;
+            // If history view is open, re-render it too
+            if (currentView === 'history') renderHistory();
+          }
         } else {
           const target = orders.find(o => o.orderId === payload.orderId);
-          if (target) {
-            target.status = payload.status;
-          }
+          if (target) target.status = payload.status;
         }
         renderOrders();
       });
@@ -306,6 +491,7 @@
       });
 
       document.getElementById('countAll').textContent = orders.length;
+      document.getElementById('countActive').textContent = orders.length;
       document.getElementById('countHot').textContent = countHot;
       document.getElementById('countCold').textContent = countCold;
       document.getElementById('countBakery').textContent = countBakery;
@@ -449,7 +635,17 @@
 
       // Optimistic local UI update
       if (nextStatus === 'COMPLETED') {
+        // Move to history immediately (optimistic)
+        const completedOrder = orders.find(o => o.orderId === orderId);
         orders = orders.filter(o => o.orderId !== orderId);
+
+        if (completedOrder) {
+          completedOrder.status = 'COMPLETED';
+          completedOrder.completedAt = new Date().toISOString();
+          historyOrders.unshift(completedOrder);
+          document.getElementById('countHistory').textContent = historyOrders.length;
+          if (currentView === 'history') renderHistory();
+        }
       } else {
         const order = orders.find(o => o.orderId === orderId);
         if (order) order.status = nextStatus;

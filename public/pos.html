@@ -738,6 +738,19 @@
       renderProducts(filtered);
     }
 
+    function getProductIconClass(name) {
+      const n = (name || '').toLowerCase();
+      if (n.includes('bánh') || n.includes('croissant') || n.includes('tiramisu') || n.includes('cake')) return 'fa-solid fa-bread-slice';
+      if (n.includes('trà') || n.includes('matcha') || n.includes('oolong')) return 'fa-solid fa-leaf';
+      if (n.includes('đá xay') || n.includes('sinh tố') || n.includes('freeze')) return 'fa-solid fa-blender';
+      return 'fa-solid fa-mug-saucer';
+    }
+
+    function formatPosTableName(tableNumber) {
+      if (!tableNumber) return 'Bàn';
+      return /^bàn\s/i.test(String(tableNumber).trim()) ? tableNumber : `Bàn ${tableNumber}`;
+    }
+
     function renderProducts(items) {
       const grid = document.getElementById('productGrid');
       const emptyAlert = document.getElementById('emptyProductAlert');
@@ -751,17 +764,20 @@
       emptyAlert.classList.add('hidden');
       grid.innerHTML = items.map(p => {
         const price = Number(p.basePrice).toLocaleString();
+        const thumb = p.imageUrl
+          ? `<img src="${p.imageUrl}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" loading="lazy">`
+          : `<i class="${getProductIconClass(p.name)}"></i>`;
         return `
-          <div onclick="addToCart('${p.id}')" class="group bg-white rounded-2xl p-3.5 border border-stone-200 shadow-sm hover:shadow-md hover:border-amber-400 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between select-none">
+          <div onclick="addToCart('${p.id}')" class="group bg-white rounded-2xl p-3.5 border border-[#E6E1D8] hover:-translate-y-0.5 hover:border-amber-600 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between select-none">
             <div>
-              <div class="w-full aspect-[4/3] rounded-xl bg-amber-50 group-hover:bg-amber-100 text-amber-700 flex items-center justify-center text-3xl mb-2.5 transition">
-                <i class="fa-solid fa-mug-saucer"></i>
+              <div class="w-full aspect-[4/3] rounded-xl bg-[#F5F0E8] group-hover:bg-amber-100/70 text-amber-800 flex items-center justify-center text-3xl mb-2.5 overflow-hidden transition">
+                ${thumb}
               </div>
               <h4 class="text-xs font-bold text-stone-900 leading-snug line-clamp-2">${p.name}</h4>
             </div>
-            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between">
-              <span class="text-xs font-extrabold text-amber-600">${price}đ</span>
-              <span class="w-6 h-6 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-[10px] group-hover:bg-amber-600 group-hover:text-white transition">
+            <div class="mt-2.5 pt-2 border-t border-[#F0ECE4] flex items-center justify-between">
+              <span class="text-xs font-extrabold text-amber-700 tabular-nums">${price}đ</span>
+              <span class="w-6 h-6 rounded-lg bg-[#FAF8F5] border border-[#E6E1D8] text-amber-700 flex items-center justify-center text-[10px] group-hover:bg-amber-600 group-hover:text-white group-hover:border-amber-600 transition">
                 <i class="fa-solid fa-plus"></i>
               </span>
             </div>
@@ -801,27 +817,27 @@
           if (t.status === 'OCCUPIED') occupiedCount++;
           const isSelected = selectedTable && selectedTable.id === t.id;
 
-          let colorClass = 'bg-white border-emerald-300 text-emerald-800 hover:border-emerald-500 hover:shadow-md';
-          let statusBadge = '<span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold"><i class="fa-solid fa-circle text-[6px] mr-1"></i>Trống</span>';
+          let colorClass = 'bg-white border-emerald-400 text-emerald-900 hover:border-emerald-600 hover:-translate-y-0.5';
+          let statusBadge = '<span class="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold"><i class="fa-solid fa-circle text-[6px] mr-1"></i>Trống</span>';
 
           if (t.status === 'OCCUPIED') {
-            colorClass = 'bg-rose-50/50 border-rose-300 text-rose-800 hover:border-rose-500 hover:shadow-md';
+            colorClass = 'bg-rose-50/70 border-rose-300 text-rose-900 hover:border-rose-500 hover:-translate-y-0.5';
             const orderCount = (t.currentPendingOrders && t.currentPendingOrders.length) ? ` (${t.currentPendingOrders.length})` : '';
             statusBadge = `<span class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-bold"><i class="fa-solid fa-circle text-[6px] mr-1"></i>Có khách${orderCount}</span>`;
           } else if (t.status === 'RESERVED') {
-            colorClass = 'bg-amber-50/50 border-amber-300 text-amber-800 hover:border-amber-500 hover:shadow-md';
+            colorClass = 'bg-amber-50/70 border-amber-300 text-amber-900 hover:border-amber-500 hover:-translate-y-0.5';
             statusBadge = '<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[10px] font-bold"><i class="fa-solid fa-clock text-[8px] mr-1"></i>Đã đặt</span>';
           }
 
           if (isSelected) {
-            colorClass = 'bg-amber-100 border-2 border-amber-600 text-amber-900 shadow-md';
+            colorClass = 'bg-amber-50 border-2 border-amber-600 text-amber-950';
           }
 
           return `
             <div onclick="handleTableClick('${t.id}')" class="p-4 rounded-2xl border-2 ${colorClass} cursor-pointer transition select-none flex flex-col justify-between h-28">
               <div class="flex items-center justify-between">
-                <span class="text-base font-extrabold">Bàn ${t.tableNumber}</span>
-                <span class="text-[11px] font-semibold text-stone-500"><i class="fa-solid fa-users text-[10px]"></i> ${t.capacity}</span>
+                <span class="text-base font-extrabold">${formatPosTableName(t.tableNumber)}</span>
+                <span class="text-[11px] font-semibold text-stone-500 tabular-nums"><i class="fa-solid fa-users text-[10px]"></i> ${t.capacity}</span>
               </div>
               <div class="flex items-center justify-between">
                 ${statusBadge}

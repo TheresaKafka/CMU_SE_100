@@ -440,6 +440,90 @@
       }
     }
 
+    function buildHistoryCardHtml(order) {
+      const completedTime = new Date(order.completedAt).toLocaleTimeString('vi-VN', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const createdTime = new Date(order.createdAt).toLocaleTimeString('vi-VN', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+
+      return `
+        <div class="kds-card bg-[#141413] rounded-2xl border border-[#262624] flex flex-col overflow-hidden">
+          <div class="h-1 w-full bg-emerald-600/70"></div>
+          <div class="p-4 border-b border-[#222220] flex items-start justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono-num text-sm font-extrabold text-stone-200">#${order.orderId.slice(0, 8).toUpperCase()}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}">
+                  ${order.orderType === 'DINE_IN' ? formatTableLabel(order.tableNumber) : 'Mang đi'}
+                </span>
+              </div>
+              <p class="font-mono-num text-[11px] text-stone-500 mt-1">${createdTime} → ${completedTime}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+              <i class="fa-solid fa-check mr-1"></i>Xong
+            </span>
+          </div>
+
+          <div class="p-3.5 flex-1 space-y-2 overflow-y-auto max-h-60 no-scrollbar">
+            ${order.items.map(item => `
+              <div class="bg-[#0C0C0B] rounded-xl p-2.5 border border-[#222220] flex items-center gap-2.5">
+                <span class="font-mono-num w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-xs shrink-0">
+                  ${item.quantity}
+                </span>
+                <div class="flex-1 min-w-0">
+                  <span class="font-semibold text-xs text-stone-200 line-clamp-1">${item.productName}</span>
+                  ${item.modifiers && item.modifiers.length > 0 ? `
+                    <div class="flex flex-wrap gap-1 mt-1">
+                      ${item.modifiers.map(m => m.name ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#1C1C1A] text-amber-400 border border-[#2A2A27]">+ ${m.name}</span>` : '').join('')}
+                    </div>` : ''}
+                </div>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${getStationBadge(item.station)} shrink-0">${getStationName(item.station)}</span>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="px-4 py-2.5 border-t border-[#222220] bg-[#101211] flex items-center justify-between text-[11px] font-semibold text-emerald-400">
+            <span><i class="fa-solid fa-circle-check mr-1.5"></i>Đã hoàn thành</span>
+            <span class="font-mono-num text-stone-500">${getTotalItemQuantity(order)} món</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGroupedTableColumns(gridEl, ordersList, cardBuilder) {
+      gridEl.className = 'flex items-start gap-4 overflow-x-auto pb-4';
+      const groups = new Map();
+
+      ordersList.forEach(o => {
+        const isDineIn = o.orderType === 'DINE_IN';
+        const key = isDineIn ? `table:${o.tableNumber || 'unknown'}` : 'takeaway';
+        const label = isDineIn ? formatTableLabel(o.tableNumber) : 'Mang đi';
+        if (!groups.has(key)) {
+          groups.set(key, { key, label, isDineIn, items: [] });
+        }
+        groups.get(key).items.push(o);
+      });
+
+      gridEl.innerHTML = Array.from(groups.values()).map(group => `
+        <div class="w-80 shrink-0 bg-[#111110] rounded-2xl border border-[#262624] p-3 flex flex-col gap-3">
+          <div class="flex items-center justify-between px-1 pb-2 border-b border-[#222220]">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full ${group.isDineIn ? 'bg-amber-500' : 'bg-sky-400'}"></span>
+              <h3 class="text-sm font-extrabold text-stone-100">${group.label}</h3>
+            </div>
+            <span class="font-mono-num px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#1C1C1A] border border-[#2A2A27] text-stone-300">
+              ${group.items.length} đơn
+            </span>
+          </div>
+          <div class="flex flex-col gap-3">
+            ${group.items.map(cardBuilder).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
     // ── Render history grid ────────────────────────────────────────────
     function renderHistory() {
       const grid = document.getElementById('kdsHistoryGrid');
@@ -454,57 +538,13 @@
       }
       empty.classList.add('hidden');
 
-      grid.innerHTML = displayHistory.map(order => {
-        const completedTime = new Date(order.completedAt).toLocaleTimeString('vi-VN', {
-          hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
-        const createdTime = new Date(order.createdAt).toLocaleTimeString('vi-VN', {
-          hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
+      if (sortMode === 'TABLE') {
+        renderGroupedTableColumns(grid, displayHistory, buildHistoryCardHtml);
+        return;
+      }
 
-        return `
-          <div class="kds-card bg-[#141413] rounded-2xl border border-[#262624] flex flex-col overflow-hidden">
-            <div class="h-1 w-full bg-emerald-600/70"></div>
-            <div class="p-4 border-b border-[#222220] flex items-start justify-between gap-2">
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-mono-num text-sm font-extrabold text-stone-200">#${order.orderId.slice(0, 8).toUpperCase()}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}">
-                    ${order.orderType === 'DINE_IN' ? formatTableLabel(order.tableNumber) : 'Mang đi'}
-                  </span>
-                </div>
-                <p class="font-mono-num text-[11px] text-stone-500 mt-1">${createdTime} → ${completedTime}</p>
-              </div>
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
-                <i class="fa-solid fa-check mr-1"></i>Xong
-              </span>
-            </div>
-
-            <div class="p-3.5 flex-1 space-y-2 overflow-y-auto max-h-60 no-scrollbar">
-              ${order.items.map(item => `
-                <div class="bg-[#0C0C0B] rounded-xl p-2.5 border border-[#222220] flex items-center gap-2.5">
-                  <span class="font-mono-num w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-xs shrink-0">
-                    ${item.quantity}
-                  </span>
-                  <div class="flex-1 min-w-0">
-                    <span class="font-semibold text-xs text-stone-200 line-clamp-1">${item.productName}</span>
-                    ${item.modifiers && item.modifiers.length > 0 ? `
-                      <div class="flex flex-wrap gap-1 mt-1">
-                        ${item.modifiers.map(m => m.name ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#1C1C1A] text-amber-400 border border-[#2A2A27]">+ ${m.name}</span>` : '').join('')}
-                      </div>` : ''}
-                  </div>
-                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${getStationBadge(item.station)} shrink-0">${getStationName(item.station)}</span>
-                </div>
-              `).join('')}
-            </div>
-
-            <div class="px-4 py-2.5 border-t border-[#222220] bg-[#101211] flex items-center justify-between text-[11px] font-semibold text-emerald-400">
-              <span><i class="fa-solid fa-circle-check mr-1.5"></i>Đã hoàn thành</span>
-              <span class="font-mono-num text-stone-500">${getTotalItemQuantity(order)} món</span>
-            </div>
-          </div>
-        `;
-      }).join('');
+      grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4';
+      grid.innerHTML = displayHistory.map(buildHistoryCardHtml).join('');
     }
 
     // ── Helper: infer station from product name ────────────────────────
@@ -634,6 +674,97 @@
       renderOrders();
     }
 
+    function buildActiveOrderCardHtml(order) {
+      const timeDiff = Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000));
+      const mins = Math.floor(timeDiff / 60);
+      const secs = timeDiff % 60;
+      const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+      let slaBar = 'bg-emerald-500';
+      let timerColor = 'text-stone-200 bg-[#1C1C1A] border border-[#2A2A27]';
+      let cardBorder = 'border-[#262624]';
+      if (mins >= 10) {
+        slaBar = 'bg-rose-500';
+        timerColor = 'text-rose-300 bg-rose-950/80 border border-rose-700/80';
+        cardBorder = 'border-rose-700/70';
+      } else if (mins >= 5) {
+        slaBar = 'bg-amber-500';
+        timerColor = 'text-amber-300 bg-amber-950/70 border border-amber-700/70';
+        cardBorder = 'border-amber-700/60';
+      }
+
+      const isProcessing = order.status === 'PROCESSING';
+      const visibleItems = currentStation === 'ALL'
+        ? order.items
+        : order.items.filter(it => it.station === currentStation);
+
+      return `
+        <div class="kds-card bg-[#141413] rounded-2xl border ${cardBorder} flex flex-col justify-between overflow-hidden ${order.isNew ? 'new-order-flash ring-2 ring-emerald-500' : ''}">
+          <div class="h-1 w-full ${slaBar}"></div>
+          <div class="p-4 border-b border-[#222220] flex items-start justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-mono-num text-sm font-extrabold text-white">#${order.orderId.slice(0, 8).toUpperCase()}</span>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}">
+                  ${order.orderType === 'DINE_IN' ? formatTableLabel(order.tableNumber) : 'Mang đi'}
+                </span>
+              </div>
+              <p class="font-mono-num text-[11px] text-stone-500 mt-1">${new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${getTotalItemQuantity(order)} món</p>
+            </div>
+
+            <div class="px-2.5 py-1 rounded-lg text-xs font-mono-num font-bold ${timerColor} shrink-0">
+              <i class="fa-solid fa-stopwatch mr-1 text-[10px]"></i>
+              <span class="order-timer" data-time="${order.createdAt}">${timeStr}</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 flex-1 space-y-2.5 overflow-y-auto max-h-72 no-scrollbar">
+            ${visibleItems.map(item => `
+              <div class="bg-[#0C0C0B] rounded-xl p-3 border border-[#222220]">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex items-center gap-2.5">
+                    <span class="font-mono-num w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-xs shrink-0">
+                      ${item.quantity}
+                    </span>
+                    <span class="font-bold text-sm text-stone-100 leading-snug">${item.productName}</span>
+                  </div>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${getStationBadge(item.station)} shrink-0">
+                    ${getStationName(item.station)}
+                  </span>
+                </div>
+
+                ${item.modifiers && item.modifiers.length > 0 ? `
+                  <div class="mt-2 pl-8 flex flex-wrap gap-1">
+                    ${item.modifiers.map(m => m.name ? `
+                      <span class="text-[10px] px-2 py-0.5 rounded bg-[#1C1C1A] text-amber-400 border border-[#2A2A27] font-medium">
+                        + ${m.name}
+                      </span>
+                    ` : '').join('')}
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="p-3.5 border-t border-[#222220] bg-[#10100F]">
+            ${isProcessing ? `
+              <button onclick="updateOrderStatus('${order.orderId}', 'COMPLETED')"
+                class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs tracking-wide transition active:scale-[0.98] flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check text-xs"></i>
+                <span>ĐÃ HOÀN THÀNH</span>
+              </button>
+            ` : `
+              <button onclick="updateOrderStatus('${order.orderId}', 'PROCESSING')"
+                class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs tracking-wide transition active:scale-[0.98] flex items-center justify-center gap-2">
+                <i class="fa-solid fa-fire-burner text-xs"></i>
+                <span>BẮT ĐẦU PHA CHẾ</span>
+              </button>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
     // Render Order Cards
     function renderOrders() {
       const grid = document.getElementById('kdsOrderGrid');
@@ -668,100 +799,13 @@
 
       empty.classList.add('hidden');
 
-      grid.innerHTML = displayOrders.map(order => {
-        const timeDiff = Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000));
-        const mins = Math.floor(timeDiff / 60);
-        const secs = timeDiff % 60;
-        const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      if (sortMode === 'TABLE') {
+        renderGroupedTableColumns(grid, displayOrders, buildActiveOrderCardHtml);
+        return;
+      }
 
-        let slaBar = 'bg-emerald-500';
-        let timerColor = 'text-stone-200 bg-[#1C1C1A] border border-[#2A2A27]';
-        let cardBorder = 'border-[#262624]';
-        if (mins >= 10) {
-          slaBar = 'bg-rose-500';
-          timerColor = 'text-rose-300 bg-rose-950/80 border border-rose-700/80';
-          cardBorder = 'border-rose-700/70';
-        } else if (mins >= 5) {
-          slaBar = 'bg-amber-500';
-          timerColor = 'text-amber-300 bg-amber-950/70 border border-amber-700/70';
-          cardBorder = 'border-amber-700/60';
-        }
-
-        const isProcessing = order.status === 'PROCESSING';
-        const visibleItems = currentStation === 'ALL'
-          ? order.items
-          : order.items.filter(it => it.station === currentStation);
-
-        return `
-          <div class="kds-card bg-[#141413] rounded-2xl border ${cardBorder} flex flex-col justify-between overflow-hidden ${order.isNew ? 'new-order-flash ring-2 ring-emerald-500' : ''}">
-            <div class="h-1 w-full ${slaBar}"></div>
-            <!-- Card Header -->
-            <div class="p-4 border-b border-[#222220] flex items-start justify-between gap-2">
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-mono-num text-sm font-extrabold text-white">#${order.orderId.slice(0, 8).toUpperCase()}</span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}">
-                    ${order.orderType === 'DINE_IN' ? formatTableLabel(order.tableNumber) : 'Mang đi'}
-                  </span>
-                </div>
-                <p class="font-mono-num text-[11px] text-stone-500 mt-1">${new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${getTotalItemQuantity(order)} món</p>
-              </div>
-
-              <!-- Live Elapsed Timer -->
-              <div class="px-2.5 py-1 rounded-lg text-xs font-mono-num font-bold ${timerColor} shrink-0">
-                <i class="fa-solid fa-stopwatch mr-1 text-[10px]"></i>
-                <span class="order-timer" data-time="${order.createdAt}">${timeStr}</span>
-              </div>
-            </div>
-
-            <!-- Card Body: Item List -->
-            <div class="p-3.5 flex-1 space-y-2.5 overflow-y-auto max-h-72 no-scrollbar">
-              ${visibleItems.map(item => `
-                <div class="bg-[#0C0C0B] rounded-xl p-3 border border-[#222220]">
-                  <div class="flex items-start justify-between gap-2">
-                    <div class="flex items-center gap-2.5">
-                      <span class="font-mono-num w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-xs shrink-0">
-                        ${item.quantity}
-                      </span>
-                      <span class="font-bold text-sm text-stone-100 leading-snug">${item.productName}</span>
-                    </div>
-                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${getStationBadge(item.station)} shrink-0">
-                      ${getStationName(item.station)}
-                    </span>
-                  </div>
-
-                  ${item.modifiers && item.modifiers.length > 0 ? `
-                    <div class="mt-2 pl-8 flex flex-wrap gap-1">
-                      ${item.modifiers.map(m => m.name ? `
-                        <span class="text-[10px] px-2 py-0.5 rounded bg-[#1C1C1A] text-amber-400 border border-[#2A2A27] font-medium">
-                          + ${m.name}
-                        </span>
-                      ` : '').join('')}
-                    </div>
-                  ` : ''}
-                </div>
-              `).join('')}
-            </div>
-
-            <!-- Card Footer: Status Actions -->
-            <div class="p-3.5 border-t border-[#222220] bg-[#10100F]">
-              ${isProcessing ? `
-                <button onclick="updateOrderStatus('${order.orderId}', 'COMPLETED')"
-                  class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs tracking-wide transition active:scale-[0.98] flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-check text-xs"></i>
-                  <span>ĐÃ HOÀN THÀNH</span>
-                </button>
-              ` : `
-                <button onclick="updateOrderStatus('${order.orderId}', 'PROCESSING')"
-                  class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs tracking-wide transition active:scale-[0.98] flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-fire-burner text-xs"></i>
-                  <span>BẮT ĐẦU PHA CHẾ</span>
-                </button>
-              `}
-            </div>
-          </div>
-        `;
-      }).join('');
+      grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4';
+      grid.innerHTML = displayOrders.map(buildActiveOrderCardHtml).join('');
     }
 
     function getStationBadge(station) {

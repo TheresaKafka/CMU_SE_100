@@ -53,9 +53,7 @@ export class KdsGateway
     }
 
     this.logger.log(`Phát sóng sự kiện order.created cho Đơn hàng #${orderData.orderId.slice(0, 8)}`);
-    // Bắn cả order.created và order:new để các frontend client dễ dàng bắt sự kiện
     this.server.emit('order.created', orderData);
-    this.server.emit('order:new', orderData);
   }
 
   /**

@@ -566,7 +566,8 @@
     }
 
     function addNewOrderFromSocket(eventData) {
-      if (orders.some(o => o.orderId === eventData.orderId)) return;
+      if (!eventData || !eventData.orderId) return;
+      if (orders.some(o => o.orderId === eventData.orderId) || historyOrders.some(h => h.orderId === eventData.orderId)) return;
 
       const newOrder = {
         orderId: eventData.orderId,

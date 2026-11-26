@@ -29,11 +29,32 @@ interface CalculatedOrderItem {
 
 @Injectable()
 export class OrdersService {
+  // Chống double-submit / nhảy 2 đơn khi thu ngân chạm đúp trên POS (TTL 4s)
+  private readonly inFlightOrders = new Map<string, ReturnType<OrdersService['executeCreateOrder']>>();
+  private readonly recentOrderCache = new Map<
+    string,
+    { expiresAt: number; result: Awaited<ReturnType<OrdersService['executeCreateOrder']>> }
+  >();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly inventoryService: InventoryService,
     private readonly kdsGateway: KdsGateway,
   ) {}
+
+  private buildOrderFingerprint(cashierId: string, dto: CreateOrderDto): string {
+    const itemsSig = [...dto.items]
+      .map((it) => {
+        const mods = [...(it.modifiers ?? [])]
+          .map((m) => m.optionValueId)
+          .sort()
+          .join(',');
+        return `${it.productId}:${it.quantity}:${mods}`;
+      })
+      .sort()
+      .join('|');
+    return `${cashierId}::${dto.shiftId}::${dto.tableId ?? ''}::${dto.orderType ?? 'DINE_IN'}::${dto.paymentMethod ?? 'NONE'}::${itemsSig}`;
+  }
 
   /**
    * Tạo đơn hàng với Database Transaction ACID (INV-03) & Bắn WebSockets KDS (POS-02).
@@ -43,7 +64,47 @@ export class OrdersService {
    * - Tự động trừ kho nguyên liệu (INV-03) nếu thanh toán ngay. Nếu thiếu nguyên liệu -> ROLLBACK toàn bộ!
    * - Bắn sự kiện real-time order.created xuống màn hình pha chế KDS.
    */
-  async createOrder(cashierId: string, dto: CreateOrderDto) {
+  async createOrder(
+    cashierId: string,
+    dto: CreateOrderDto,
+  ): ReturnType<OrdersService['executeCreateOrder']> {
+    const fingerprint = this.buildOrderFingerprint(cashierId, dto);
+    const now = Date.now();
+
+    // Dọn cache hết hạn
+    for (const [key, entry] of this.recentOrderCache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.recentOrderCache.delete(key);
+      }
+    }
+
+    const cached = this.recentOrderCache.get(fingerprint);
+    if (cached && cached.expiresAt > now) {
+      return cached.result;
+    }
+
+    const inFlight = this.inFlightOrders.get(fingerprint);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const task = this.executeCreateOrder(cashierId, dto)
+      .then((result) => {
+        this.recentOrderCache.set(fingerprint, {
+          expiresAt: Date.now() + 4000,
+          result,
+        });
+        return result;
+      })
+      .finally(() => {
+        this.inFlightOrders.delete(fingerprint);
+      });
+
+    this.inFlightOrders.set(fingerprint, task);
+    return task;
+  }
+
+  private async executeCreateOrder(cashierId: string, dto: CreateOrderDto) {
     let tableInfo: { tableNumber: string; areaName: string } | null = null;
 
     // 1. Thực thi Interactive Transaction

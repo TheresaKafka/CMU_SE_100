@@ -11,7 +11,8 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"></script>
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #FAF8F5; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -41,11 +42,11 @@
     }
   </style>
 </head>
-<body class="bg-stone-100 text-stone-900 h-screen flex flex-col overflow-hidden">
+<body class="bg-[#FAF8F5] text-stone-900 h-screen flex flex-col overflow-hidden">
   <!-- Top Bar -->
-  <header class="bg-white border-b border-stone-200 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm z-20">
+  <header class="bg-white border-b border-[#E6E1D8] px-6 py-3 flex items-center justify-between shrink-0 z-20">
     <div class="flex items-center gap-4">
-      <div class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-amber-600/30">
+      <div class="w-10 h-10 rounded-xl bg-[#1C1917] text-[#FAF8F5] flex items-center justify-center text-lg font-bold">
         <i class="fa-solid fa-mug-hot"></i>
       </div>
       <div>
@@ -230,7 +231,7 @@
 
           <!-- SePay VietQR Payment -->
           <button onclick="handlePayQr()" id="btnPayQr" disabled
-            class="py-3 px-2 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 disabled:opacity-50 text-white font-bold text-xs transition shadow-lg shadow-amber-600/25 flex flex-col items-center justify-center gap-1">
+            class="py-3 px-2 rounded-2xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs transition flex flex-col items-center justify-center gap-1 active:scale-[0.98]">
             <i class="fa-solid fa-qrcode text-sm"></i>
             <span>Quét QR</span>
           </button>

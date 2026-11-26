@@ -6,100 +6,169 @@
   <title>KDS Bếp & Pha Chế - The Coffee Lab</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"></script>
   <style>
-    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0C0C0B;
+      color: #F5F5F4;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     @keyframes pulse-card {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.02); }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2px); }
     }
     .new-order-flash {
-      animation: pulse-card 0.5s ease-in-out 3;
+      animation: pulse-card 0.45s ease-in-out 3;
+    }
+    .kds-card {
+      transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease;
+    }
+    .kds-card:hover {
+      transform: translateY(-2px);
     }
   </style>
 </head>
-<body class="bg-stone-950 text-stone-100 min-h-screen flex flex-col overflow-hidden select-none">
+<body class="min-h-screen flex flex-col overflow-hidden select-none">
   <!-- Top Navigation Bar -->
-  <header class="bg-stone-900 border-b border-stone-800 px-6 py-3 flex items-center justify-between shrink-0">
-    <div class="flex items-center gap-4">
-      <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-emerald-900/40">
+  <header class="bg-[#141413] border-b border-[#262624] px-6 py-3 flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <div class="flex items-center gap-3.5">
+      <div class="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-base">
         <i class="fa-solid fa-blender"></i>
       </div>
       <div>
-        <h1 class="text-base font-extrabold tracking-tight text-white leading-none">THE COFFEE LAB • KDS</h1>
-        <p class="text-[11px] font-semibold text-emerald-400 tracking-wider uppercase mt-1">Màn Hình Pha Chế Barista & Bếp</p>
+        <h1 class="text-sm font-extrabold tracking-tight text-[#F5F5F4] leading-none">THE COFFEE LAB · KDS</h1>
+        <p class="text-[11px] font-medium text-stone-400 mt-1">Điều phối pha chế &amp; bếp</p>
       </div>
 
       <!-- Socket Connection Status -->
-      <div id="socketBadge" class="ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 bg-stone-800 text-stone-400">
-        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-        <span>Đang kết nối socket...</span>
+      <div id="socketBadge" class="ml-2 px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 bg-[#1C1C1A] border border-[#2A2A27] text-stone-400">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>Đang kết nối...</span>
       </div>
     </div>
 
     <!-- Main View Tabs (Active / History) -->
-    <div class="flex rounded-xl bg-stone-800/80 p-1 border border-stone-700/50 mr-2">
-      <button onclick="switchView('active')" id="tabViewActive" class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm flex items-center gap-1.5">
-        <i class="fa-solid fa-fire-burner"></i> Đang Chế Biến (<span id="countActive">0</span>)
-      </button>
-      <button onclick="switchView('history')" id="tabViewHistory" class="px-4 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white flex items-center gap-1.5">
-        <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i> Lịch Sử Hoàn Thành (<span id="countHistory">0</span>)
-      </button>
-    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex rounded-lg bg-[#0C0C0B] p-1 border border-[#262624]">
+        <button onclick="switchView('active')" id="tabViewActive" class="px-3.5 py-1.5 rounded-md text-xs font-bold transition bg-emerald-600 text-white flex items-center gap-1.5">
+          <i class="fa-solid fa-fire-burner text-[11px]"></i>
+          <span>Đang Chế Biến (<span id="countActive" class="font-mono-num">0</span>)</span>
+        </button>
+        <button onclick="switchView('history')" id="tabViewHistory" class="px-3.5 py-1.5 rounded-md text-xs font-bold transition text-stone-400 hover:text-stone-100 flex items-center gap-1.5">
+          <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+          <span>Lịch Sử (<span id="countHistory" class="font-mono-num">0</span>)</span>
+        </button>
+      </div>
 
-    <!-- Station Filter Tabs (only shown in active view) -->
-    <div id="stationTabs" class="flex rounded-xl bg-stone-800/80 p-1 border border-stone-700/50">
-      <button onclick="filterStation('ALL')" id="tabStationAll" class="px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm">
-        Tất Cả (<span id="countAll">0</span>)
-      </button>
-      <button onclick="filterStation('HOT_BAR')" id="tabStationHot" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
-        <i class="fa-solid fa-mug-hot mr-1 text-amber-500"></i>Hot Bar (<span id="countHot">0</span>)
-      </button>
-      <button onclick="filterStation('COLD_BAR')" id="tabStationCold" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
-        <i class="fa-solid fa-snowflake mr-1 text-sky-400"></i>Cold Bar (<span id="countCold">0</span>)
-      </button>
-      <button onclick="filterStation('WARMING_STATION')" id="tabStationBakery" class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white">
-        <i class="fa-solid fa-bread-slice mr-1 text-orange-400"></i>Bếp Bánh (<span id="countBakery">0</span>)
-      </button>
+      <!-- Station Filter Tabs (only shown in active view) -->
+      <div id="stationTabs" class="flex rounded-lg bg-[#0C0C0B] p-1 border border-[#262624]">
+        <button onclick="filterStation('ALL')" id="tabStationAll" class="px-3 py-1.5 rounded-md text-xs font-bold transition bg-[#262624] text-white">
+          Tất Cả (<span id="countAll" class="font-mono-num">0</span>)
+        </button>
+        <button onclick="filterStation('HOT_BAR')" id="tabStationHot" class="px-3 py-1.5 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Hot Bar (<span id="countHot" class="font-mono-num">0</span>)
+        </button>
+        <button onclick="filterStation('COLD_BAR')" id="tabStationCold" class="px-3 py-1.5 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Cold Bar (<span id="countCold" class="font-mono-num">0</span>)
+        </button>
+        <button onclick="filterStation('WARMING_STATION')" id="tabStationBakery" class="px-3 py-1.5 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Bếp Bánh (<span id="countBakery" class="font-mono-num">0</span>)
+        </button>
+      </div>
     </div>
 
     <!-- Right Quick Links & Audio Test -->
-    <div class="flex items-center gap-3">
-      <button onclick="playNotificationBeep()" title="Thử nghiệm âm thanh chuông" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 transition flex items-center gap-1.5 border border-stone-700">
+    <div class="flex items-center gap-2">
+      <button onclick="playNotificationBeep()" title="Thử nghiệm âm thanh chuông" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1C1C1A] hover:bg-[#262624] text-stone-300 transition flex items-center gap-1.5 border border-[#2A2A27] active:scale-[0.98]">
         <i class="fa-solid fa-volume-high text-emerald-400"></i>
-        <span class="hidden sm:inline">Chuông báo</span>
+        <span class="hidden sm:inline">Chuông</span>
       </button>
 
-      <a href="/pos.html" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 transition flex items-center gap-1.5">
+      <a href="/pos.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1C1C1A] hover:bg-[#262624] text-stone-300 transition flex items-center gap-1.5 border border-[#2A2A27]">
         <i class="fa-solid fa-cash-register text-amber-400"></i>
         <span>Quầy POS</span>
       </a>
 
-      <a href="/admin.html" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 transition flex items-center gap-1.5">
-        <i class="fa-solid fa-chart-pie text-indigo-400"></i>
-        <span>HQ Dashboard</span>
+      <a href="/admin.html" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#1C1C1A] hover:bg-[#262624] text-stone-300 transition flex items-center gap-1.5 border border-[#2A2A27]">
+        <i class="fa-solid fa-chart-pie text-stone-400"></i>
+        <span>Quản Trị</span>
       </a>
     </div>
   </header>
+
+  <!-- Sort, Order Type Filter & Search Control Bar -->
+  <div class="bg-[#111110] border-b border-[#222220] px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-stone-500 mr-1">
+        <i class="fa-solid fa-arrow-up-wide-short mr-1"></i>Sắp xếp:
+      </span>
+      <div class="flex flex-wrap rounded-lg bg-[#0C0C0B] p-0.5 border border-[#262624] gap-0.5" id="sortButtonsGroup">
+        <button onclick="setSortMode('OLDEST')" data-sort="OLDEST" class="sort-btn px-3 py-1 rounded-md text-xs font-bold transition bg-amber-600 text-white">
+          Chờ lâu nhất
+        </button>
+        <button onclick="setSortMode('NEWEST')" data-sort="NEWEST" class="sort-btn px-3 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Mới nhất
+        </button>
+        <button onclick="setSortMode('TABLE')" data-sort="TABLE" class="sort-btn px-3 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Theo bàn
+        </button>
+        <button onclick="setSortMode('STATUS')" data-sort="STATUS" class="sort-btn px-3 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Đang pha trước
+        </button>
+        <button onclick="setSortMode('ITEMS')" data-sort="ITEMS" class="sort-btn px-3 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Nhiều món nhất
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2.5 flex-wrap">
+      <!-- Order Type Filter -->
+      <div class="flex rounded-lg bg-[#0C0C0B] p-0.5 border border-[#262624]">
+        <button onclick="setOrderTypeFilter('ALL')" data-type-filter="ALL" class="type-filter-btn px-2.5 py-1 rounded-md text-xs font-bold transition bg-[#262624] text-white">
+          Tất cả
+        </button>
+        <button onclick="setOrderTypeFilter('DINE_IN')" data-type-filter="DINE_IN" class="type-filter-btn px-2.5 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Tại bàn
+        </button>
+        <button onclick="setOrderTypeFilter('TAKE_AWAY')" data-type-filter="TAKE_AWAY" class="type-filter-btn px-2.5 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white">
+          Mang đi
+        </button>
+      </div>
+
+      <!-- Quick Search -->
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 text-xs"></i>
+        <input id="kdsSearchInput" type="text" oninput="handleSearchChange(this.value)"
+          placeholder="Tìm mã đơn, bàn, món..."
+          class="bg-[#0C0C0B] border border-[#262624] focus:border-emerald-600 rounded-lg pl-8 pr-3 py-1.5 text-xs text-stone-200 placeholder-stone-500 outline-none w-48 sm:w-56 transition">
+      </div>
+    </div>
+  </div>
 
   <!-- KDS Order Kanban Grid -->
   <main class="flex-1 p-6 overflow-y-auto">
     <!-- Active Orders View -->
     <div id="viewActive">
       <!-- Empty State -->
-      <div id="kdsEmptyState" class="h-full flex flex-col items-center justify-center text-stone-600 py-20">
-        <div class="w-24 h-24 rounded-3xl bg-stone-900 border border-stone-800 flex items-center justify-center text-4xl text-stone-700 mb-4 shadow-inner">
+      <div id="kdsEmptyState" class="h-full flex flex-col items-center justify-center text-stone-500 py-24">
+        <div class="w-16 h-16 rounded-2xl bg-[#141413] border border-[#262624] flex items-center justify-center text-2xl text-stone-600 mb-4">
           <i class="fa-solid fa-circle-check"></i>
         </div>
-        <h3 class="text-xl font-bold text-stone-400">Quầy Bar / Bếp Đã Sạch Đơn</h3>
-        <p class="text-xs text-stone-600 mt-1 max-w-sm text-center">Đang chờ đơn hàng mới từ thu ngân POS... Đơn sẽ tự động xuất hiện real-time tại đây kèm âm báo chuông.</p>
+        <h3 class="text-lg font-bold text-stone-300">Quầy Bar / Bếp Đã Sạch Đơn</h3>
+        <p class="text-xs text-stone-500 mt-1 max-w-sm text-center">Đơn mới từ quầy POS sẽ hiển thị real-time tại đây kèm chuông báo.</p>
       </div>
 
       <!-- Active Orders Grid -->
-      <div id="kdsOrderGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+      <div id="kdsOrderGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         <!-- Dynamic Order Cards -->
       </div>
     </div>
@@ -107,22 +176,25 @@
     <!-- History View (Completed Orders) -->
     <div id="viewHistory" class="hidden">
       <div class="flex items-center justify-between mb-5">
-        <h2 class="text-sm font-extrabold text-stone-300 flex items-center gap-2">
-          <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i>
-          Lịch Sử Đơn Đã Hoàn Thành Hôm Nay
-        </h2>
-        <button onclick="loadHistory()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition flex items-center gap-1.5">
+        <div>
+          <h2 class="text-sm font-extrabold text-stone-200 flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-emerald-500"></i>
+            Lịch Sử Đơn Đã Hoàn Thành
+          </h2>
+          <p class="text-[11px] text-stone-500 mt-0.5">Áp dụng chung bộ lọc loại đơn, tìm kiếm và sắp xếp phía trên.</p>
+        </div>
+        <button onclick="loadHistory()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[#1C1C1A] hover:bg-[#262624] text-stone-200 border border-[#2A2A27] transition flex items-center gap-1.5 active:scale-[0.98]">
           <i class="fa-solid fa-rotate-right text-emerald-400"></i> Làm mới
         </button>
       </div>
 
       <!-- History Empty State -->
-      <div id="historyEmptyState" class="hidden flex flex-col items-center justify-center text-stone-600 py-20">
-        <div class="w-24 h-24 rounded-3xl bg-stone-900 border border-stone-800 flex items-center justify-center text-4xl text-stone-700 mb-4">
+      <div id="historyEmptyState" class="hidden flex flex-col items-center justify-center text-stone-500 py-24">
+        <div class="w-16 h-16 rounded-2xl bg-[#141413] border border-[#262624] flex items-center justify-center text-2xl text-stone-600 mb-4">
           <i class="fa-solid fa-box-open"></i>
         </div>
-        <h3 class="text-xl font-bold text-stone-400">Chưa có đơn hoàn thành</h3>
-        <p class="text-xs text-stone-600 mt-1">Các đơn barista bấm "Đã Hoàn Thành" sẽ hiện ở đây.</p>
+        <h3 class="text-lg font-bold text-stone-300">Chưa có đơn hoàn thành</h3>
+        <p class="text-xs text-stone-500 mt-1">Các đơn Barista bấm "Đã Hoàn Thành" sẽ được chuyển sang đây.</p>
       </div>
 
       <!-- History Loading -->
@@ -131,7 +203,7 @@
       </div>
 
       <!-- History Grid -->
-      <div id="kdsHistoryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+      <div id="kdsHistoryGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
         <!-- Dynamic History Cards -->
       </div>
     </div>
@@ -144,6 +216,9 @@
     let historyOrders = [];   // Completed orders
     let currentStation = 'ALL';
     let currentView = 'active'; // 'active' | 'history'
+    let sortMode = 'OLDEST';    // 'OLDEST' | 'NEWEST' | 'TABLE' | 'STATUS' | 'ITEMS'
+    let orderTypeFilter = 'ALL'; // 'ALL' | 'DINE_IN' | 'TAKE_AWAY'
+    let searchQuery = '';
     let audioCtx = null;
 
     // Web Audio API Beep Synth (Ting Ting Bell)
@@ -162,7 +237,7 @@
         const gain = audioCtx.createGain();
 
         osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(880, now); // Note A5
+        osc1.frequency.setValueAtTime(880, now);
         osc1.frequency.exponentialRampToValueAtTime(1320, now + 0.15);
 
         osc2.type = 'triangle';
@@ -196,6 +271,98 @@
       return /^bàn\s/i.test(String(tableNumber).trim()) ? tableNumber : `Bàn ${tableNumber}`;
     }
 
+    function extractTableSortNumber(order) {
+      if (order.orderType !== 'DINE_IN') return Number.MAX_SAFE_INTEGER;
+      if (!order.tableNumber) return Number.MAX_SAFE_INTEGER - 1;
+      const match = String(order.tableNumber).match(/\d+/);
+      return match ? parseInt(match[0], 10) : 99999;
+    }
+
+    function getTotalItemQuantity(order) {
+      return (order.items || []).reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
+    }
+
+    // ── Sort & Filter Controls ─────────────────────────────────────────
+    function setSortMode(mode) {
+      sortMode = mode;
+      document.querySelectorAll('.sort-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-sort') === mode;
+        btn.className = isActive
+          ? 'sort-btn px-3 py-1 rounded-md text-xs font-bold transition bg-amber-600 text-white'
+          : 'sort-btn px-3 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white';
+      });
+      if (currentView === 'history') renderHistory();
+      else renderOrders();
+    }
+
+    function setOrderTypeFilter(type) {
+      orderTypeFilter = type;
+      document.querySelectorAll('.type-filter-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-type-filter') === type;
+        btn.className = isActive
+          ? 'type-filter-btn px-2.5 py-1 rounded-md text-xs font-bold transition bg-[#262624] text-white'
+          : 'type-filter-btn px-2.5 py-1 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white';
+      });
+      if (currentView === 'history') renderHistory();
+      else renderOrders();
+    }
+
+    function handleSearchChange(val) {
+      searchQuery = (val || '').trim().toLowerCase();
+      if (currentView === 'history') renderHistory();
+      else renderOrders();
+    }
+
+    function applyFilterAndSort(list, isHistoryView = false) {
+      let result = [...list];
+
+      if (orderTypeFilter !== 'ALL') {
+        result = result.filter(o => o.orderType === orderTypeFilter);
+      }
+
+      if (searchQuery) {
+        result = result.filter(o => {
+          const code = (o.orderId || '').slice(0, 8).toLowerCase();
+          const tbl = (o.tableNumber || '').toLowerCase();
+          const itemMatch = (o.items || []).some(it => (it.productName || '').toLowerCase().includes(searchQuery));
+          return code.includes(searchQuery) || tbl.includes(searchQuery) || itemMatch;
+        });
+      }
+
+      result.sort((a, b) => {
+        const timeA = new Date(isHistoryView ? (a.completedAt || a.createdAt) : a.createdAt).getTime();
+        const timeB = new Date(isHistoryView ? (b.completedAt || b.createdAt) : b.createdAt).getTime();
+
+        if (sortMode === 'OLDEST') {
+          return timeA - timeB;
+        }
+        if (sortMode === 'NEWEST') {
+          return timeB - timeA;
+        }
+        if (sortMode === 'TABLE') {
+          const numA = extractTableSortNumber(a);
+          const numB = extractTableSortNumber(b);
+          if (numA !== numB) return numA - numB;
+          const strA = String(a.tableNumber || '');
+          const strB = String(b.tableNumber || '');
+          if (strA !== strB) return strA.localeCompare(strB, 'vi');
+          return timeA - timeB;
+        }
+        if (sortMode === 'STATUS') {
+          const rank = (s) => (s === 'PROCESSING' ? 0 : (s === 'PAID' ? 1 : 2));
+          const diff = rank(a.status) - rank(b.status);
+          return diff !== 0 ? diff : timeA - timeB;
+        }
+        if (sortMode === 'ITEMS') {
+          const diff = getTotalItemQuantity(b) - getTotalItemQuantity(a);
+          return diff !== 0 ? diff : timeA - timeB;
+        }
+        return timeA - timeB;
+      });
+
+      return result;
+    }
+
     // ── View switching (Active / History) ──────────────────────────────
     function switchView(view) {
       currentView = view;
@@ -207,8 +374,8 @@
 
       const activeBtn = document.getElementById('tabViewActive');
       const historyBtn = document.getElementById('tabViewHistory');
-      activeBtn.className = `px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${!isHistory ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-400 hover:text-white'}`;
-      historyBtn.className = `px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${isHistory ? 'bg-emerald-600 text-white shadow-sm' : 'text-stone-400 hover:text-white'}`;
+      activeBtn.className = `px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${!isHistory ? 'bg-emerald-600 text-white' : 'text-stone-400 hover:text-stone-100'}`;
+      historyBtn.className = `px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${isHistory ? 'bg-emerald-600 text-white' : 'text-stone-400 hover:text-stone-100'}`;
 
       if (isHistory) loadHistory();
     }
@@ -278,14 +445,16 @@
       const grid = document.getElementById('kdsHistoryGrid');
       const empty = document.getElementById('historyEmptyState');
 
-      if (historyOrders.length === 0) {
+      const displayHistory = applyFilterAndSort(historyOrders, true);
+
+      if (displayHistory.length === 0) {
         grid.innerHTML = '';
         empty.classList.remove('hidden');
         return;
       }
       empty.classList.add('hidden');
 
-      grid.innerHTML = historyOrders.map(order => {
+      grid.innerHTML = displayHistory.map(order => {
         const completedTime = new Date(order.completedAt).toLocaleTimeString('vi-VN', {
           hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
@@ -294,33 +463,34 @@
         });
 
         return `
-          <div class="bg-stone-900/70 rounded-3xl border border-emerald-900/50 shadow-xl flex flex-col overflow-hidden opacity-80 hover:opacity-100 transition-opacity">
-            <div class="p-4 border-b border-stone-800 flex items-center justify-between">
+          <div class="kds-card bg-[#141413] rounded-2xl border border-[#262624] flex flex-col overflow-hidden">
+            <div class="h-1 w-full bg-emerald-600/70"></div>
+            <div class="p-4 border-b border-[#222220] flex items-start justify-between gap-2">
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-base font-extrabold text-stone-300">#${order.orderId.slice(0, 8).toUpperCase()}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'}">
+                  <span class="font-mono-num text-sm font-extrabold text-stone-200">#${order.orderId.slice(0, 8).toUpperCase()}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}">
                     ${order.orderType === 'DINE_IN' ? formatTableLabel(order.tableNumber) : 'Mang đi'}
                   </span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-900/60 text-emerald-400 border border-emerald-700/40">
-                    <i class="fa-solid fa-check mr-0.5"></i>Hoàn thành
-                  </span>
                 </div>
-                <p class="text-[10px] font-medium text-stone-500 mt-0.5">Tạo: ${createdTime} · Xong: ${completedTime}</p>
+                <p class="font-mono-num text-[11px] text-stone-500 mt-1">${createdTime} → ${completedTime}</p>
               </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                <i class="fa-solid fa-check mr-1"></i>Xong
+              </span>
             </div>
 
-            <div class="p-4 flex-1 space-y-2 overflow-y-auto max-h-60 no-scrollbar">
+            <div class="p-3.5 flex-1 space-y-2 overflow-y-auto max-h-60 no-scrollbar">
               ${order.items.map(item => `
-                <div class="bg-stone-950/60 rounded-xl p-2.5 border border-stone-800/60 flex items-center gap-2.5">
-                  <span class="w-6 h-6 rounded-lg bg-emerald-600/20 text-emerald-500 border border-emerald-600/30 flex items-center justify-center font-extrabold text-xs shrink-0">
+                <div class="bg-[#0C0C0B] rounded-xl p-2.5 border border-[#222220] flex items-center gap-2.5">
+                  <span class="font-mono-num w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-xs shrink-0">
                     ${item.quantity}
                   </span>
                   <div class="flex-1 min-w-0">
-                    <span class="font-bold text-sm text-stone-300 line-clamp-1">${item.productName}</span>
+                    <span class="font-semibold text-xs text-stone-200 line-clamp-1">${item.productName}</span>
                     ${item.modifiers && item.modifiers.length > 0 ? `
                       <div class="flex flex-wrap gap-1 mt-1">
-                        ${item.modifiers.map(m => m.name ? `<span class="text-[9px] px-1.5 py-0.5 rounded bg-stone-800 text-amber-400 border border-stone-700">• ${m.name}</span>` : '').join('')}
+                        ${item.modifiers.map(m => m.name ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#1C1C1A] text-amber-400 border border-[#2A2A27]">+ ${m.name}</span>` : '').join('')}
                       </div>` : ''}
                   </div>
                   <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${getStationBadge(item.station)} shrink-0">${getStationName(item.station)}</span>
@@ -328,8 +498,9 @@
               `).join('')}
             </div>
 
-            <div class="p-3 border-t border-stone-800 bg-emerald-950/30 flex items-center justify-center gap-2 text-xs font-bold text-emerald-500">
-              <i class="fa-solid fa-circle-check"></i> Đã Hoàn Thành
+            <div class="px-4 py-2.5 border-t border-[#222220] bg-[#101211] flex items-center justify-between text-[11px] font-semibold text-emerald-400">
+              <span><i class="fa-solid fa-circle-check mr-1.5"></i>Đã hoàn thành</span>
+              <span class="font-mono-num text-stone-500">${getTotalItemQuantity(order)} món</span>
             </div>
           </div>
         `;
@@ -351,13 +522,13 @@
       const badge = document.getElementById('socketBadge');
 
       socket.on('connect', () => {
-        badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 bg-emerald-950/80 text-emerald-400 border border-emerald-800/60';
-        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>Socket Real-Time</span>';
+        badge.className = 'ml-2 px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 bg-emerald-950/70 text-emerald-400 border border-emerald-800/60';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Real-Time</span>';
       });
 
       socket.on('disconnect', () => {
-        badge.className = 'ml-4 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2 bg-rose-950/80 text-rose-400 border border-rose-800/60';
-        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Mất kết nối</span>';
+        badge.className = 'ml-2 px-2.5 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1.5 bg-rose-950/70 text-rose-400 border border-rose-800/60';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span><span>Mất kết nối</span>';
       });
 
       // Lắng nghe sự kiện đơn hàng mới tạo từ POS
@@ -368,7 +539,6 @@
       });
 
       socket.on('order:new', (orderEvent) => {
-        // Fallback event name
         if (!orders.some(o => o.orderId === orderEvent.orderId)) {
           addNewOrderFromSocket(orderEvent);
         }
@@ -405,14 +575,18 @@
         areaName: eventData.areaName || null,
         status: eventData.status || 'PENDING',
         createdAt: eventData.createdAt || new Date().toISOString(),
-        items: eventData.items || [],
+        items: (eventData.items || []).map(it => ({
+          productName: it.productName || 'Món',
+          quantity: it.quantity || 1,
+          modifiers: it.modifiers || [],
+          station: it.station || inferStation(it.productName || '')
+        })),
         isNew: true
       };
 
       orders.unshift(newOrder);
       renderOrders();
 
-      // Clear animation after 3s
       setTimeout(() => {
         newOrder.isNew = false;
         renderOrders();
@@ -429,10 +603,7 @@
         const json = await res.json();
         const data = json.data || json || [];
 
-        // Filter active orders (PENDING, PAID, PROCESSING)
         const active = data.filter(o => ['PENDING', 'PAID', 'PROCESSING'].includes(o.status));
-
-        // Format into KDS items
         orders = active.map(mapApiOrderToKds);
 
         renderOrders();
@@ -453,9 +624,9 @@
 
       Object.keys(tabs).forEach(k => {
         if (k === station) {
-          tabs[k].className = 'px-4 py-1.5 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-sm';
+          tabs[k].className = 'px-3 py-1.5 rounded-md text-xs font-bold transition bg-[#262624] text-white';
         } else {
-          tabs[k].className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition text-stone-400 hover:text-white';
+          tabs[k].className = 'px-3 py-1.5 rounded-md text-xs font-semibold transition text-stone-400 hover:text-white';
         }
       });
 
@@ -467,11 +638,9 @@
       const grid = document.getElementById('kdsOrderGrid');
       const empty = document.getElementById('kdsEmptyState');
 
-      // Update counters
-      let countAll = 0, countHot = 0, countCold = 0, countBakery = 0;
+      let countHot = 0, countCold = 0, countBakery = 0;
       orders.forEach(o => {
         o.items.forEach(it => {
-          countAll++;
           if (it.station === 'HOT_BAR') countHot++;
           if (it.station === 'COLD_BAR') countCold++;
           if (it.station === 'WARMING_STATION') countBakery++;
@@ -484,11 +653,11 @@
       document.getElementById('countCold').textContent = countCold;
       document.getElementById('countBakery').textContent = countBakery;
 
-      // Filter by station
-      let displayOrders = orders;
-      if (currentStation !== 'ALL') {
-        displayOrders = orders.filter(o => o.items.some(it => it.station === currentStation));
-      }
+      let displayOrders = currentStation === 'ALL'
+        ? orders
+        : orders.filter(o => o.items.some(it => it.station === currentStation));
+
+      displayOrders = applyFilterAndSort(displayOrders, false);
 
       if (displayOrders.length === 0) {
         grid.innerHTML = '';
@@ -499,75 +668,74 @@
       empty.classList.add('hidden');
 
       grid.innerHTML = displayOrders.map(order => {
-        const timeDiff = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000);
+        const timeDiff = Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000));
         const mins = Math.floor(timeDiff / 60);
         const secs = timeDiff % 60;
         const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-        // Color urgency
-        let timerColor = 'text-stone-300 bg-stone-800';
-        let cardBorder = 'border-stone-800';
+        let slaBar = 'bg-emerald-500';
+        let timerColor = 'text-stone-200 bg-[#1C1C1A] border border-[#2A2A27]';
+        let cardBorder = 'border-[#262624]';
         if (mins >= 10) {
-          timerColor = 'text-rose-300 bg-rose-950 border border-rose-800 animate-pulse';
-          cardBorder = 'border-rose-600/80 shadow-rose-900/30';
+          slaBar = 'bg-rose-500';
+          timerColor = 'text-rose-300 bg-rose-950/80 border border-rose-700/80';
+          cardBorder = 'border-rose-700/70';
         } else if (mins >= 5) {
-          timerColor = 'text-amber-300 bg-amber-950 border border-amber-800';
-          cardBorder = 'border-amber-600/80';
+          slaBar = 'bg-amber-500';
+          timerColor = 'text-amber-300 bg-amber-950/70 border border-amber-700/70';
+          cardBorder = 'border-amber-700/60';
         }
 
         const isProcessing = order.status === 'PROCESSING';
-
-        // Filter items if specific station selected
         const visibleItems = currentStation === 'ALL'
           ? order.items
           : order.items.filter(it => it.station === currentStation);
 
         return `
-          <div class="bg-stone-900 rounded-3xl border ${cardBorder} shadow-xl flex flex-col justify-between overflow-hidden transition-all duration-300 ${order.isNew ? 'new-order-flash ring-2 ring-emerald-500' : ''}">
+          <div class="kds-card bg-[#141413] rounded-2xl border ${cardBorder} flex flex-col justify-between overflow-hidden ${order.isNew ? 'new-order-flash ring-2 ring-emerald-500' : ''}">
+            <div class="h-1 w-full ${slaBar}"></div>
             <!-- Card Header -->
-            <div class="p-4 border-b border-stone-800 flex items-center justify-between">
+            <div class="p-4 border-b border-[#222220] flex items-start justify-between gap-2">
               <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-base font-extrabold text-white">#${order.orderId.slice(0, 8).toUpperCase()}</span>
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'}">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-mono-num text-sm font-extrabold text-white">#${order.orderId.slice(0, 8).toUpperCase()}</span>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${order.orderType === 'DINE_IN' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' : 'bg-sky-500/15 text-sky-400 border border-sky-500/30'}">
                     ${order.orderType === 'DINE_IN' ? formatTableLabel(order.tableNumber) : 'Mang đi'}
                   </span>
                 </div>
-                <p class="text-[10px] font-medium text-stone-500 mt-0.5">${new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+                <p class="font-mono-num text-[11px] text-stone-500 mt-1">${new Date(order.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} · ${getTotalItemQuantity(order)} món</p>
               </div>
 
               <!-- Live Elapsed Timer -->
-              <div class="px-2.5 py-1 rounded-xl text-xs font-mono font-bold ${timerColor}">
+              <div class="px-2.5 py-1 rounded-lg text-xs font-mono-num font-bold ${timerColor} shrink-0">
                 <i class="fa-solid fa-stopwatch mr-1 text-[10px]"></i>
                 <span class="order-timer" data-time="${order.createdAt}">${timeStr}</span>
               </div>
             </div>
 
             <!-- Card Body: Item List -->
-            <div class="p-4 flex-1 space-y-3 overflow-y-auto max-h-72 no-scrollbar">
+            <div class="p-3.5 flex-1 space-y-2.5 overflow-y-auto max-h-72 no-scrollbar">
               ${visibleItems.map(item => `
-                <div class="bg-stone-950/70 rounded-2xl p-3 border border-stone-800/80">
+                <div class="bg-[#0C0C0B] rounded-xl p-3 border border-[#222220]">
                   <div class="flex items-start justify-between gap-2">
                     <div class="flex items-center gap-2.5">
-                      <span class="w-6 h-6 rounded-lg bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-extrabold text-xs">
+                      <span class="font-mono-num w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-extrabold text-xs shrink-0">
                         ${item.quantity}
                       </span>
-                      <span class="font-extrabold text-sm text-stone-100">${item.productName}</span>
+                      <span class="font-bold text-sm text-stone-100 leading-snug">${item.productName}</span>
                     </div>
-                    <!-- Station Tag -->
-                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${getStationBadge(item.station)}">
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${getStationBadge(item.station)} shrink-0">
                       ${getStationName(item.station)}
                     </span>
                   </div>
 
-                  <!-- Modifiers -->
                   ${item.modifiers && item.modifiers.length > 0 ? `
                     <div class="mt-2 pl-8 flex flex-wrap gap-1">
-                      ${item.modifiers.map(m => `
-                        <span class="text-[10px] px-2 py-0.5 rounded-md bg-stone-800 text-amber-400 border border-stone-700/60 font-medium">
-                          • ${m.name}
+                      ${item.modifiers.map(m => m.name ? `
+                        <span class="text-[10px] px-2 py-0.5 rounded bg-[#1C1C1A] text-amber-400 border border-[#2A2A27] font-medium">
+                          + ${m.name}
                         </span>
-                      `).join('')}
+                      ` : '').join('')}
                     </div>
                   ` : ''}
                 </div>
@@ -575,17 +743,17 @@
             </div>
 
             <!-- Card Footer: Status Actions -->
-            <div class="p-4 border-t border-stone-800 bg-stone-950/40">
+            <div class="p-3.5 border-t border-[#222220] bg-[#10100F]">
               ${isProcessing ? `
                 <button onclick="updateOrderStatus('${order.orderId}', 'COMPLETED')"
-                  class="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs tracking-wider transition active:scale-[0.98] shadow-lg shadow-emerald-950 flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-check text-sm"></i>
+                  class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs tracking-wide transition active:scale-[0.98] flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-check text-xs"></i>
                   <span>ĐÃ HOÀN THÀNH</span>
                 </button>
               ` : `
                 <button onclick="updateOrderStatus('${order.orderId}', 'PROCESSING')"
-                  class="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-xs tracking-wider transition active:scale-[0.98] shadow-lg shadow-amber-950 flex items-center justify-center gap-2">
-                  <i class="fa-solid fa-fire-burner text-sm"></i>
+                  class="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs tracking-wide transition active:scale-[0.98] flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-fire-burner text-xs"></i>
                   <span>BẮT ĐẦU PHA CHẾ</span>
                 </button>
               `}
@@ -596,10 +764,10 @@
     }
 
     function getStationBadge(station) {
-      if (station === 'HOT_BAR') return 'bg-amber-500/10 text-amber-400 border border-amber-500/30';
-      if (station === 'COLD_BAR') return 'bg-sky-500/10 text-sky-400 border border-sky-500/30';
-      if (station === 'WARMING_STATION') return 'bg-orange-500/10 text-orange-400 border border-orange-500/30';
-      return 'bg-stone-800 text-stone-400';
+      if (station === 'HOT_BAR') return 'bg-amber-500/10 text-amber-400 border border-amber-500/25';
+      if (station === 'COLD_BAR') return 'bg-sky-500/10 text-sky-400 border border-sky-500/25';
+      if (station === 'WARMING_STATION') return 'bg-orange-500/10 text-orange-400 border border-orange-500/25';
+      return 'bg-[#1C1C1A] text-stone-400 border border-[#2A2A27]';
     }
 
     function getStationName(station) {
@@ -621,7 +789,6 @@
         console.log('Socket update response:', response);
       });
 
-      // Optimistic local UI update
       if (nextStatus === 'COMPLETED') {
         moveOrderToHistory(orderId);
       } else {
@@ -636,7 +803,7 @@
       document.querySelectorAll('.order-timer').forEach(el => {
         const created = el.getAttribute('data-time');
         if (!created) return;
-        const diff = Math.floor((Date.now() - new Date(created).getTime()) / 1000);
+        const diff = Math.max(0, Math.floor((Date.now() - new Date(created).getTime()) / 1000));
         const mins = Math.floor(diff / 60);
         const secs = diff % 60;
         el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
@@ -647,4 +814,3 @@
   </script>
 </body>
 </html>
-

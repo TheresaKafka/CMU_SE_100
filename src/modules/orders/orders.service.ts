@@ -423,7 +423,9 @@ export class OrdersService {
     let collection = this.prisma.orm.public.Order
       .include('cashier')
       .include('table')
-      .include('items', (items) => items.include('product'))
+      .include('items', (items) =>
+        items.include('product').include('modifiers', (mods) => mods.include('optionValue')),
+      )
       .orderBy((o) => o.createdAt.desc());
 
     if (query.shiftId) {
@@ -451,6 +453,18 @@ export class OrdersService {
       totalAmount: Number(o.totalAmount),
       itemCount: o.items.reduce((acc, item) => acc + item.quantity, 0),
       createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+      items: o.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product ? item.product.name : 'Món',
+        quantity: item.quantity,
+        unitPrice: Number(item.unitPrice),
+        totalPrice: Number(item.totalPrice),
+        modifiers: (item.modifiers ?? []).map((m) => ({
+          valueName: m.optionValue ? m.optionValue.valueName : '',
+        })),
+      })),
     }));
   }
 

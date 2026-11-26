@@ -102,7 +102,7 @@ export class OrdersController {
 
   @ApiOperation({ summary: 'Lấy danh sách các đơn hàng (lọc theo ca, trạng thái)' })
   @ApiResponse({ status: 200, description: 'Danh sách đơn hàng' })
-  @Roles(UserRole.CASHIER, UserRole.ADMIN, UserRole.MANAGER)
+  @Roles(UserRole.CASHIER, UserRole.ADMIN, UserRole.MANAGER, UserRole.BARISTA)
   @Get()
   async getOrders(@Query() query: QueryOrdersDto) {
     return this.ordersService.getOrders(query);
